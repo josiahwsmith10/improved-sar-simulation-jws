@@ -37,6 +37,9 @@ switch sar.method
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
         
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numY,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numY];
+        
     case "Rectilinear"
         sar = getsarAxes(ant,sar);
         
@@ -52,7 +55,10 @@ switch sar.method
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
         
-    case "Circular"        
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numX,numY,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numX,sar.numY];
+        
+    case "Circular"
         % Verify single element array
         if ant.tx.numTx ~= 1 || ant.rx.numRx ~= 1
             warning("Array must have only 1 Tx and 1 Rx. Please disable necessary elements.")
@@ -74,7 +80,11 @@ switch sar.method
         sar.tx.xyz_m = reshape(sar.tx.xyz_m,[],3);
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
-    case "Cylindrical"        
+        
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numTheta,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numTheta];
+        
+    case "Cylindrical"
         % Verify linearity of MIMO array
         if max(diff([ant.tx.xy(:,1);ant.rx.xy(:,1)])) > 8*eps
             warning("MIMO array must be colinear. Please disable necessary elements.")
@@ -100,7 +110,15 @@ switch sar.method
         sar.tx.xyz_m = reshape(sar.tx.xyz_m,[],3);
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
+        
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numTheta,numY,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numTheta,sar.numY];
+        
 end
+
+sar.tx.xyz_m = single(sar.tx.xyz_m);
+sar.rx.xyz_m = single(sar.rx.xyz_m);
+sar.vx.xyz_m = single(sar.vx.xyz_m);
 
 %% Plot the synthetic aperture
 figure

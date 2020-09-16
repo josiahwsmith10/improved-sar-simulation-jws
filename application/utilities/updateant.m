@@ -6,6 +6,9 @@ fig = app.fig;
 ant.tx.z0_m = app.TransmitterZmEditField.Value;
 ant.rx.z0_m = app.ReceiverZmEditField.Value;
 
+AntAxes = app.AntAxes;
+AntVirtualAxes = app.AntVirtualAxes;
+
 %% Get positions from table
 ant.tx.xy = table2array(app.TxTable.Data);
 ant.rx.xy = table2array(app.RxTable.Data);
@@ -56,7 +59,7 @@ if ~ant.tx.numTx || ~ant.rx.numRx
     return;
 end
 
-h = app.AntAxes;
+h = AntAxes;
 hold(h,'off')
 scatter(h,ant.tx.xy(:,1)/fmcw.lambda_m,ant.tx.xy(:,2)/fmcw.lambda_m,'xr');
 hold(h,'on')
@@ -81,7 +84,7 @@ ylabel(h,"y (\lambda m)")
 title(h,"Physical Array (x-y)")
 
 
-h = app.AntVirtualAxes;
+h = AntVirtualAxes;
 scatter(h,ant.vx.xy(:,1)/fmcw.lambda_m,ant.vx.xy(:,2)/fmcw.lambda_m,'.k');
 legend(h,"Vx")
 xlabel(h,"x (\lambda m)")

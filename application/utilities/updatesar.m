@@ -118,9 +118,9 @@ switch app.SARMethodDropDown.Value
         app.NumYStepsEditField.Value = 1;
         sar = getsarAxes(app,sar);
         
-        sar.x_m = app.TransmitterZmEditField.Value*cos(sar.theta_rad);
+        sar.x_m = ant.tx.z0_m*cos(sar.theta_rad);
         sar.y_m = zeros(size(sar.theta_rad));
-        sar.z_m = app.TransmitterZmEditField.Value*sin(sar.theta_rad);
+        sar.z_m = ant.tx.z0_m*sin(sar.theta_rad);
         
         sar.xyz_m = reshape([sar.x_m(:),sar.y_m(:),sar.z_m(:)],1,[],3);
         
@@ -160,8 +160,9 @@ switch app.SARMethodDropDown.Value
         % Set no horizontal scan
         app.NumXStepsEditField.Value = 1;
         sar = getsarAxes(app,sar);
-        sar.x_m = app.TransmitterZmEditField.Value*cos(sar.theta_rad);
-        sar.z_m = app.TransmitterZmEditField.Value*sin(sar.theta_rad);
+        
+        sar.x_m = ant.tx.z0_m*cos(sar.theta_rad);
+        sar.z_m = ant.tx.z0_m*sin(sar.theta_rad);
         
         % Use theta as first dimension -> so we obtain s(theta,y')
         sar.X_m = repmat(sar.x_m(:),1,sar.numY);
@@ -295,5 +296,5 @@ app.YSizemEditField.Value = sar.numY * sar.yStep_m;
 sar.x_m = (-(sar.numX - 1)/2 : (sar.numX - 1)/2) * sar.xStep_m;
 sar.y_m = (-(sar.numY - 1)/2 : (sar.numY - 1)/2) * sar.yStep_m;
 sar.theta_rad = linspace(0,sar.thetaMax_deg - sar.thetaMax_deg/sar.numTheta,sar.numTheta)*2*pi/360;
-sar.z_m = app.TransmitterZmEditField.Value;
+sar.z_m = ant.tx.z0_m;
 end
