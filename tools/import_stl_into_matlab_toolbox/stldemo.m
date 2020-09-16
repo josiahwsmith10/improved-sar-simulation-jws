@@ -36,7 +36,7 @@ xyzMatrixT(:,3) = v(:,2);
 pcshow(xyzMatrixT);
 xlabel('x');ylabel('y');zlabel('z');
 
-clear f ptCloud ptCloudOut v;
+% clear f ptCloud ptCloudOut v;
 
 %% Render
 % The model is rendered with a PATCH graphics object. We also add some dynamic
