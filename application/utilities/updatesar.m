@@ -2,6 +2,7 @@ function sar = updatesar(app)
 %% Get local variables
 ant = app.ant;
 fmcw = app.fmcw;
+fig = app.fig;
 
 %% Update step sizes and theta aperture size
 if app.XStepSwitch.Value == "λ"
@@ -59,6 +60,9 @@ switch app.SARMethodDropDown.Value
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
         
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numY,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numY];
+        
     case "Rectilinear"
         % Enable necessary fields
         app.XStepSizeEditField.Enable = true;
@@ -83,6 +87,9 @@ switch app.SARMethodDropDown.Value
         sar.tx.xyz_m = reshape(sar.tx.xyz_m,[],3);
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
+        
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numX,numY,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numX,sar.numY];
         
     case "Circular"
         % Enable necessary fields
@@ -124,6 +131,10 @@ switch app.SARMethodDropDown.Value
         sar.tx.xyz_m = reshape(sar.tx.xyz_m,[],3);
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
+        
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numTheta,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numTheta];
+        
     case "Cylindrical"
         % Enable necessary fields
         app.XStepSizeEditField.Enable = false;
@@ -166,7 +177,15 @@ switch app.SARMethodDropDown.Value
         sar.tx.xyz_m = reshape(sar.tx.xyz_m,[],3);
         sar.rx.xyz_m = reshape(sar.rx.xyz_m,[],3);
         sar.vx.xyz_m = reshape(sar.vx.xyz_m,[],3);
+        
+        % Unwrap sar.tx.xyz_m & sar.rx.xyz_m as [numRx,numTx,numTheta,numY,3]
+        sar.size = [ant.rx.numRx,ant.tx.numTx,sar.numTheta,sar.numY];
+        
 end
+
+sar.tx.xyz_m = single(sar.tx.xyz_m);
+sar.rx.xyz_m = single(sar.rx.xyz_m);
+sar.vx.xyz_m = single(sar.vx.xyz_m);
 
 %% Set SAR method
 sar.method = app.SARMethodDropDown.Value;
@@ -182,6 +201,27 @@ end
 
 %% Plot the synthetic aperture
 h = app.SARAxes;
+hold(h,'off')
+temp = sar.tx.xyz_m;
+scatter3(h,temp(:,1),temp(:,3),temp(:,2),'.r')
+hold(h,'on')
+temp = sar.rx.xyz_m;
+scatter3(h,temp(:,1),temp(:,3),temp(:,2),'.b')
+xlabel(h,"x (m)")
+temp1 = sar.tx.xyz_m(:,1);
+temp2 = sar.rx.xyz_m(:,1);
+xlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
+ylabel(h,"z (m)")
+temp1 = sar.tx.xyz_m(:,3);
+temp2 = sar.rx.xyz_m(:,3);
+ylim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
+zlabel(h,"y (m)")
+temp1 = sar.tx.xyz_m(:,2);
+temp2 = sar.rx.xyz_m(:,2);
+zlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
+title(h,"MIMO Synthetic Aperture")
+
+h = fig.SARAxes.h;
 hold(h,'off')
 temp = sar.tx.xyz_m;
 scatter3(h,temp(:,1),temp(:,3),temp(:,2),'.r')
@@ -220,7 +260,26 @@ temp2 = sar.rx.xyz_m(:,2);
 zlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
 title(h,"Virtual Synthetic Aperture")
 
+h = fig.SARVirtualAxes.h;
+hold(h,'off')
+temp = sar.vx.xyz_m;
+scatter3(h,temp(:,1),temp(:,3),temp(:,2),'.k')
+xlabel(h,"x (m)")
+temp1 = sar.tx.xyz_m(:,1);
+temp2 = sar.rx.xyz_m(:,1);
+xlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
+ylabel(h,"z (m)")
+temp1 = sar.tx.xyz_m(:,3);
+temp2 = sar.rx.xyz_m(:,3);
+ylim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
+zlabel(h,"y (m)")
+temp1 = sar.tx.xyz_m(:,2);
+temp2 = sar.rx.xyz_m(:,2);
+zlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
+title(h,"Virtual Synthetic Aperture")
+
 %% Set App variables
+app.fig = fig;
 end
 
 function sar = getsarAxes(app,sar)

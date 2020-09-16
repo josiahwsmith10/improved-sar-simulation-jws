@@ -1,14 +1,7 @@
-function ant = updateant(app)
-%% Get local variables
-fmcw = app.fmcw;
-fig = app.fig;
-
-ant.tx.z0_m = app.TransmitterZmEditField.Value;
-ant.rx.z0_m = app.ReceiverZmEditField.Value;
-
+function ant = updateant(ant,fmcw)
 %% Get positions from table
-ant.tx.xy = table2array(app.TxTable.Data);
-ant.rx.xy = table2array(app.RxTable.Data);
+ant.tx.xy = table2array(ant.TxTable.Data);
+ant.rx.xy = table2array(ant.RxTable.Data);
 
 %% Get number or Tx, Rx, and Vx
 ant.tx.numTx = sum(ant.tx.xy(:,5));
@@ -49,14 +42,13 @@ ant.tx.xyz_m = reshape(ant.tx.xyz_m,ant.vx.numVx,1,3);
 ant.rx.xyz_m = reshape(ant.rx.xyz_m,ant.vx.numVx,1,3);
 ant.vx.xyz_m = reshape([ant.vx.xy,ant.tx.z0_m*ones(ant.vx.numVx,1)],ant.vx.numVx,1,3);
 
-% Unwrap ant.tx.xyz_m & ant.rx.xyz_m as [numRx,numTx,3]
-
 %% Scatter plot the Tx, Rx, and Vx elements
 if ~ant.tx.numTx || ~ant.rx.numRx
     return;
 end
 
-h = app.AntAxes;
+figure
+h = handle(axes);
 hold(h,'off')
 scatter(h,ant.tx.xy(:,1)/fmcw.lambda_m,ant.tx.xy(:,2)/fmcw.lambda_m,'xr');
 hold(h,'on')
@@ -68,20 +60,8 @@ ylim(h,[min(min(ant.tx.xy(:,2)/fmcw.lambda_m),min(ant.rx.xy(:,2)/fmcw.lambda_m))
 ylabel(h,"y (\lambda m)")
 title(h,"Physical Array (x-y)")
 
-h = fig.AntAxes.h;
-hold(h,'off')
-scatter(h,ant.tx.xy(:,1)/fmcw.lambda_m,ant.tx.xy(:,2)/fmcw.lambda_m,'xr');
-hold(h,'on')
-scatter(h,ant.rx.xy(:,1)/fmcw.lambda_m,ant.rx.xy(:,2)/fmcw.lambda_m,'ob');
-legend(h,"Tx","Rx")
-xlabel(h,"x (\lambda m)")
-xlim(h,[min(min(ant.tx.xy(:,1)/fmcw.lambda_m),min(ant.rx.xy(:,1)/fmcw.lambda_m))-1,max(max(ant.tx.xy(:,1)/fmcw.lambda_m),max(ant.rx.xy(:,1)/fmcw.lambda_m))+1])
-ylim(h,[min(min(ant.tx.xy(:,2)/fmcw.lambda_m),min(ant.rx.xy(:,2)/fmcw.lambda_m))-1,max(max(ant.tx.xy(:,2)/fmcw.lambda_m),max(ant.rx.xy(:,2)/fmcw.lambda_m))+1])
-ylabel(h,"y (\lambda m)")
-title(h,"Physical Array (x-y)")
-
-
-h = app.AntVirtualAxes;
+figure
+h = handle(axes);
 scatter(h,ant.vx.xy(:,1)/fmcw.lambda_m,ant.vx.xy(:,2)/fmcw.lambda_m,'.k');
 legend(h,"Vx")
 xlabel(h,"x (\lambda m)")
@@ -89,20 +69,4 @@ xlim(h,[min(min(ant.tx.xy(:,1)/fmcw.lambda_m),min(ant.rx.xy(:,1)/fmcw.lambda_m))
 ylim(h,[min(min(ant.tx.xy(:,2)/fmcw.lambda_m),min(ant.rx.xy(:,2)/fmcw.lambda_m))-1,max(max(ant.tx.xy(:,2)/fmcw.lambda_m),max(ant.rx.xy(:,2)/fmcw.lambda_m))+1])
 ylabel(h,"y (\lambda m)")
 title(h,"Virtual Array (x-y)")
-
-h = fig.AntVirtualAxes.h;
-scatter(h,ant.vx.xy(:,1)/fmcw.lambda_m,ant.vx.xy(:,2)/fmcw.lambda_m,'.k');
-legend(h,"Vx")
-xlabel(h,"x (\lambda m)")
-xlim(h,[min(min(ant.tx.xy(:,1)/fmcw.lambda_m),min(ant.rx.xy(:,1)/fmcw.lambda_m))-1,max(max(ant.tx.xy(:,1)/fmcw.lambda_m),max(ant.rx.xy(:,1)/fmcw.lambda_m))+1])
-ylim(h,[min(min(ant.tx.xy(:,2)/fmcw.lambda_m),min(ant.rx.xy(:,2)/fmcw.lambda_m))-1,max(max(ant.tx.xy(:,2)/fmcw.lambda_m),max(ant.rx.xy(:,2)/fmcw.lambda_m))+1])
-ylabel(h,"y (\lambda m)")
-title(h,"Virtual Array (x-y)")
-
-%% Set App variables
-app.ant = ant;
-app.fig = fig;
-
-%% Update SAR
-app.sar = updatesar(app);
 end
