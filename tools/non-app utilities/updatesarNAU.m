@@ -1,4 +1,4 @@
-function sar = updatesar(sar,ant)
+function sar = updatesarNAU(sar,ant,fig)
 %% Inputs
 %   sarIn
 %       xStep_m
@@ -121,8 +121,7 @@ sar.rx.xyz_m = single(sar.rx.xyz_m);
 sar.vx.xyz_m = single(sar.vx.xyz_m);
 
 %% Plot the synthetic aperture
-figure
-h = handle(axes);
+h = fig.SARAxes.h;
 hold(h,'off')
 temp = sar.tx.xyz_m;
 scatter3(h,temp(:,1),temp(:,3),temp(:,2),'.r')
@@ -142,9 +141,9 @@ temp1 = sar.tx.xyz_m(:,2);
 temp2 = sar.rx.xyz_m(:,2);
 zlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
 title(h,"MIMO Synthetic Aperture")
+legend(h,"Tx","Rx")
 
-figure
-h = handle(axes);
+h = fig.SARVirtualAxes.h;
 hold(h,'off')
 temp = sar.vx.xyz_m;
 scatter3(h,temp(:,1),temp(:,3),temp(:,2),'.k')
@@ -161,6 +160,7 @@ temp1 = sar.tx.xyz_m(:,2);
 temp2 = sar.rx.xyz_m(:,2);
 zlim(h,[min(min(temp1),min(temp2))-0.01,max(max(temp1),max(temp2))+0.01])
 title(h,"Virtual Synthetic Aperture")
+legend(h,"Vx")
 end
 
 function sar = getsarAxes(ant,sar)
@@ -172,5 +172,5 @@ sar.ySize_m = sar.numY * sar.yStep_m;
 sar.x_m = (-(sar.numX - 1)/2 : (sar.numX - 1)/2) * sar.xStep_m;
 sar.y_m = (-(sar.numY - 1)/2 : (sar.numY - 1)/2) * sar.yStep_m;
 sar.theta_rad = linspace(0,sar.thetaMax_deg - sar.thetaMax_deg/sar.numTheta,sar.numTheta)*2*pi/360;
-sar.z_m = ant.tx.z0_m;
+sar.z_m = 0;
 end

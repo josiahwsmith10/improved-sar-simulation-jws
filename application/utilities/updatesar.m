@@ -296,5 +296,5 @@ app.YSizemEditField.Value = sar.numY * sar.yStep_m;
 sar.x_m = (-(sar.numX - 1)/2 : (sar.numX - 1)/2) * sar.xStep_m;
 sar.y_m = (-(sar.numY - 1)/2 : (sar.numY - 1)/2) * sar.yStep_m;
 sar.theta_rad = linspace(0,sar.thetaMax_deg - sar.thetaMax_deg/sar.numTheta,sar.numTheta)*2*pi/360;
-sar.z_m = ant.tx.z0_m;
+sar.z_m = app.ant.tx.z0_m;
 end

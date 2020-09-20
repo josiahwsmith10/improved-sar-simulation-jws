@@ -1,0 +1,13 @@
+function gettarget2DrandNAU(target,im,fig)
+%% Inputs
+%   filename
+%   target
+%       maxNumTarget
+%       xOffset_m
+%       yOffset_m
+%       zOffset_m
+%       o_x
+%       o_y
+
+target.numTarget = randi(target.maxNumTarget);
+target.xyz_m = single([im.x_m(1) + (im.x

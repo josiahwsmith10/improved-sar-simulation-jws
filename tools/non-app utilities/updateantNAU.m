@@ -1,4 +1,4 @@
-function ant = updateant(ant,fmcw)
+function ant = updateantNAU(ant,fmcw,fig)
 %% Get positions from table
 ant.tx.xy = table2array(ant.TxTable.Data);
 ant.rx.xy = table2array(ant.RxTable.Data);
@@ -42,13 +42,19 @@ ant.tx.xyz_m = reshape(ant.tx.xyz_m,ant.vx.numVx,1,3);
 ant.rx.xyz_m = reshape(ant.rx.xyz_m,ant.vx.numVx,1,3);
 ant.vx.xyz_m = reshape([ant.vx.xy,ant.tx.z0_m*ones(ant.vx.numVx,1)],ant.vx.numVx,1,3);
 
+temp = mean(ant.vx.xyz_m,1);
+temp(3) = 0;
+
+ant.tx.xyz_m = ant.tx.xyz_m - temp;
+ant.rx.xyz_m = ant.rx.xyz_m - temp;
+ant.vx.xyz_m = ant.vx.xyz_m - temp;
+
 %% Scatter plot the Tx, Rx, and Vx elements
 if ~ant.tx.numTx || ~ant.rx.numRx
     return;
 end
 
-figure
-h = handle(axes);
+h = fig.AntAxes.h;
 hold(h,'off')
 scatter(h,ant.tx.xy(:,1)/fmcw.lambda_m,ant.tx.xy(:,2)/fmcw.lambda_m,'xr');
 hold(h,'on')
@@ -60,8 +66,7 @@ ylim(h,[min(min(ant.tx.xy(:,2)/fmcw.lambda_m),min(ant.rx.xy(:,2)/fmcw.lambda_m))
 ylabel(h,"y (\lambda m)")
 title(h,"Physical Array (x-y)")
 
-figure
-h = handle(axes);
+h = fig.AntVirtualAxes.h;
 scatter(h,ant.vx.xy(:,1)/fmcw.lambda_m,ant.vx.xy(:,2)/fmcw.lambda_m,'.k');
 legend(h,"Vx")
 xlabel(h,"x (\lambda m)")
