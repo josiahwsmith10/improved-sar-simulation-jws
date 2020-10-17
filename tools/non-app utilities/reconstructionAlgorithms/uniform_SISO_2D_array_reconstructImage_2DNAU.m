@@ -37,8 +37,8 @@ if max(im.y_m) > max(y_m)
     warning("WARNING: im.nFFTy is too small to see the image!")
 end
 
-indX = x_m >= (im.x_m(1)) & x_m <= (im.x_m(end));
-indY = y_m >= (im.y_m(1)) & y_m <= (im.y_m(end));
+% indX = x_m >= (im.x_m(1)) & x_m <= (im.x_m(end));
+% indY = y_m >= (im.y_m(1)) & y_m <= (im.y_m(end));
 
 im.sarImage = interpn(x_m,y_m,sarImage,im.x_m,im.y_m,'spline',0);
 % im.sarImage = imresize(sarImage(indX,indY),[im.numX,im.numY]);

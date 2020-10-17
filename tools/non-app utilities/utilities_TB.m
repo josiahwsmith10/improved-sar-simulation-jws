@@ -48,6 +48,17 @@ showImScenarioNAU(target,sar,fig);
 %% Create target from random points
 %-------------------------------------------------------------------------%
 target.numTargetMax = 64;
+target.zOffset_m = 0;
+target.o_x = 2e-3;
+target.o_y = 2e-3;
+target.ampMin = 0.5;
+target.ampMax = 0.5;
+target = gettarget2DrandNAU(target,im,fig);
+showImScenarioNAU(target,sar,fig);
+
+%% Create target from png and random points
+%-------------------------------------------------------------------------%
+target.numTargetMax = 64;
 target.xStep_m = 0.5e-3;
 target.yStep_m = 0.5e-3;
 target.xOffset_m = -0.0125; %-0.0125,0.0125
@@ -57,18 +68,7 @@ target.o_x = 2e-3;
 target.o_y = 2e-3;
 target.ampMin = 0.5;
 target.ampMax = 0.5;
-target = gettarget2DpngANDrandNAU(target,im,fig);
-showImScenarioNAU(target,sar,fig);
-
-%% Create target from png and random points
-%-------------------------------------------------------------------------%
-target.numTargetMax = 64;
-target.zOffset_m = 0;
-target.o_x = 2e-3;
-target.o_y = 2e-3;
-target.ampMin = 0.5;
-target.ampMax = 0.5;
-target = gettarget2DrandNAU(target,im,fig);
+target = gettarget2DpngANDrandNAU("circle.png",target,im,fig);
 showImScenarioNAU(target,sar,fig);
 
 %% Simulate Echo Signal
