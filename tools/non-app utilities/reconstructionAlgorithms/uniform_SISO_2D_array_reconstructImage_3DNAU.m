@@ -1,7 +1,7 @@
 function im = uniform_SISO_2D_array_reconstructImage_3DNAU(sarData,target,fmcw,ant,sar,im,fig)
 % sarData is of size (sar.numY, sar.numX, fmcw.ADCSamples)
 
-%% Compute Wavenumbers 
+%% Compute Wavenumbers
 k = single(reshape(fmcw.k,1,1,[]));
 L_x = im.nFFTx * sar.xStep_m;
 dkX = 2*pi/L_x;
@@ -15,6 +15,7 @@ kZU = single(reshape(linspace(0,2*max(k),im.nFFTz),1,1,[]));
 dkZU = kZU(2) - kZU(1);
 
 if target.isGPU
+    reset(gpuDevice)
     k = gpuArray(k);
     kX = gpuArray(kX);
     kY = gpuArray(kY);
@@ -60,7 +61,13 @@ end
 %     end
 % end
 sarImageFFT = interpn(kY(:),kX(:),k(:), sarDataFFT .* focusingFilter ,kYU,kXU,kU,'linear',0);
-clear sarDataFFT focusingFilter
+clear sarDataFFT focusingFilter kY kX k kYU kXU kU
+
+if target.isGPU
+    sarImageFFT = gather(sarImageFFT);
+    reset(gpuDevice);
+    sarIamgeFFT = gpuArray(sarImageFFT);
+end
 
 %% Recover Image by IFT: p(y,x,z)
 sarImage = single(abs(ifftn(sarImageFFT)));
@@ -96,6 +103,9 @@ h = fig.SAR2D.h;
 f = fig.SAR2D.f;
 plotXYZdB(h,f,im.sarImage,im.x_m,im.y_m,im.z_m,[],im.dBMin,"Reconstructed Image",12)
 
+if target.isGPU
+    reset(gpuDevice);
+end
 end
 
 function x = make_x(xStep_m,nFFTx)
