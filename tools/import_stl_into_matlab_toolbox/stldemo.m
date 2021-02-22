@@ -13,13 +13,13 @@
 
 % Import an STL mesh, returning a PATCH-compatible face-vertex structure
 % fv = stlread('femur.stl');
-[f,v] = stlread('./STLLibrary/MaleTorso.stl');
-v = v(v(:,2)<-10,:)*2;
+[f,v] = stlread2011('./STLLibrary/MaleTorso.stl');
+% v = v(v(:,2)<-10,:)*2;
 % plot3(v(:,1),v(:,2),v(:,3),'.')
 % v = v + [0 370 0];
-v = v + [0 470 0];
+% v = v + [0 470 0];
 % plot3(v(:,1),v(:,2),v(:,3),'.')
-
+%%
 ptCloud = pointCloud(v);
 % pcshow(ptCloud);
 
@@ -28,11 +28,11 @@ ptCloudOut = pcdownsample(ptCloud,'random',0.025);
 pcshow(ptCloudOut);
 xlabel('x');ylabel('y');zlabel('z');
 
-v = ptCloudOut.Location;
-xyzMatrixT = zeros(size(v));
-xyzMatrixT(:,1) = v(:,1);
-xyzMatrixT(:,2) = v(:,3);
-xyzMatrixT(:,3) = v(:,2);
+v2 = ptCloudOut.Location;
+xyzMatrixT = zeros(size(v2));
+xyzMatrixT(:,1) = v2(:,1);
+xyzMatrixT(:,2) = v2(:,3);
+xyzMatrixT(:,3) = v2(:,2);
 pcshow(xyzMatrixT);
 xlabel('x');ylabel('y');zlabel('z');
 
