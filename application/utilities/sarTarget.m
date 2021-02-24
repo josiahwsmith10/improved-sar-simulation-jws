@@ -249,6 +249,7 @@ classdef sarTarget
             if obj.isMIMO
                 % Get distances
                 try
+                    obj.R = struct;
                     obj.R.tx = pdist2(app.sar.rx.xyz_m,obj.xyz_m);
                     obj.R.rx = pdist2(app.sar.tx.xyz_m,obj.xyz_m);
                     R_T_plus_R_R = obj.R.tx + obj.R.rx;
@@ -310,9 +311,9 @@ classdef sarTarget
                         temp = amplitudeFactor .* temp;
                     end
                     
-                    tocs(indK) = toc;
                     obj.sarData(:,indK) = single(gather(sum(temp,2)));
                     % Update the progress dialog
+                    tocs(indK) = toc;
                     d.Value = indK/app.fmcw.ADCSamples;
                     d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,indK,app.fmcw.ADCSamples);
                 end
@@ -324,6 +325,7 @@ classdef sarTarget
                 for indSAR = 1:size(app.sar.rx.xyz_m,1)
                     tic
                     if obj.isMIMO
+                        obj.R = struct;
                         obj.R.tx = pdist2(app.sar.rx.xyz_m(indSAR,:),obj.xyz_m);
                         obj.R.rx = pdist2(app.sar.tx.xyz_m(indSAR,:),obj.xyz_m);
                         R_T_plus_R_R = obj.R.tx + obj.R.rx;
@@ -363,11 +365,11 @@ classdef sarTarget
                             temp = amplitudeFactor .* temp;
                         end
                         
-                        tocs(count) = toc;
                         obj.sarData(indSAR,indK) = single(gather(sum(temp,2)));
                         % Update the progress dialog
-                        d.Value = count/(app.fmcw.ADCSamples*obj.numTargets);
-                        d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,count,app.fmcw.ADCSamples*obj.numTargets);
+                        tocs(count) = toc;
+                        d.Value = count/(app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
+                        d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,count,app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
                     end
                 end
             end

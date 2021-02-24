@@ -142,6 +142,10 @@ classdef sarScenario
                         % Unwrap obj.tx.xyz_m & obj.rx.xyz_m as [numRx,numTx,numY,numX,3]
                         obj.sarSize = [app.ant.rx.numRx,app.ant.tx.numTx,obj.numY,obj.numX];
                     else
+                        % Verify linearity of MIMO array
+                        if verifyLinearity(obj,app)
+                            return
+                        end
                         obj.sarSize = [app.ant.vx.numVx*obj.numY,obj.numX];
                     end
                     
@@ -342,16 +346,16 @@ classdef sarScenario
                 failtf = false;
             end
         end
-            
-            function tf = verifyMIMO(obj,app)
-                if app.MIMOSwitch.Value == "Use MIMO Array"
-                    tf = true;
-                elseif app.MIMOSwitch.Value == "Use EPC Virtual Elements"
-                    tf = false;
-                end
+        
+        function tf = verifyMIMO(obj,app)
+            if app.MIMOSwitch.Value == "Use MIMO Array"
+                tf = true;
+            elseif app.MIMOSwitch.Value == "Use EPC Virtual Elements"
+                tf = false;
             end
         end
-        
-        methods(Static)
-        end
     end
+    
+    methods(Static)
+    end
+end
