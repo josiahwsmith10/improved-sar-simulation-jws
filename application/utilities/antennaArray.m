@@ -182,6 +182,7 @@ classdef antennaArray
             obj = update(obj,app);
         end
         
+        
         function tf = verifyMIMO(obj,app)
             if app.MIMOSwitch.Value == "Use MIMO Array"
                 tf = true;

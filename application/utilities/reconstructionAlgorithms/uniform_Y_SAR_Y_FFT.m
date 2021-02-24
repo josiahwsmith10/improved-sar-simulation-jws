@@ -37,7 +37,7 @@ classdef uniform_Y_SAR_Y_FFT
             
             obj.sarData = app.target.sarData;
             
-            obj.isGPU = app.target.isGPU;
+            obj.isGPU = im.isGPU;
             obj.isAmplitudeFactor = app.target.isAmplitudeFactor;
             
             obj.k_vec = app.fmcw.k;
@@ -55,7 +55,7 @@ classdef uniform_Y_SAR_Y_FFT
             if max(abs(obj.y_m)) > max(abs(y_m_temp))
                 uiconfirm(app.UIFigure,"X Max (m) is too large for Number of Y FFT Points. Decrease Y Max (m) or increase Number of Y FFT Points",'Imaging Parameter Error!',...
                     "Options",{'OK'},'Icon','warning');
-                obj.isFail = false;
+                obj.isFail = true;
                 return;
             end
         end
@@ -64,7 +64,7 @@ classdef uniform_Y_SAR_Y_FFT
             if app.sar.method ~= "Linear"
                 uiconfirm(app.UIFigure,"Must use linear SAR scan along the Y-axis to perform Uniform 1-D SAR 1-D FFT image reconstruction method!",'SAR Scenario Error!',...
                     "Options",{'OK'},'Icon','warning');
-                obj.isFail = false;
+                obj.isFail = true;
                 return
             end
             
@@ -72,31 +72,32 @@ classdef uniform_Y_SAR_Y_FFT
             if max(diff([app.ant.tx.xy_m(:,1);app.ant.rx.xy_m(:,1)])) > 8*eps
                 uiconfirm(app.UIFigure,"MIMO array must be colinear. Please disable necessary elements.",'Array Topology Error!',...
                     "Options",{'OK'},'Icon','warning');
-                obj.isFail = false;
+                obj.isFail = true;
                 return
             end
             
-            if app.sar.isMIMO
+            % Ensure virtual array is uniform
+            if mean(diff(app.ant.vx.xyz_m(:,2),2)) > eps
+                uiconfirm(app.UIFigure,"Virtual antenna array is nonuniform! Change antenna positions.",'Array Topology Error!',...
+                    "Options",{'OK'},'Icon','warning');
+                obj.isFail = true;
+                return
+            end
+            
+            % And sar step size is correct
+            if app.sar.yStep_m - mean(diff(app.ant.vx.xyz_m(:,2)))*app.ant.vx.numVx > 8*eps
+                uiconfirm(app.UIFigure,"SAR step size is incorrect!",'SAR Scenario Error!',...
+                    "Options",{'OK'},'Icon','warning');
+                obj.isFail = true;
+                return
+            end
+            if app.sar.isMIMO && ~app.isMult2MonoCheckBox.Value
                 % If using MIMO Array
                 % Ensure multistatic-to-monostatic approximation is employed
-                
-            else
-                % If using EPC Virtual Elements
-                % Ensure virtual array is uniform
-                if mean(diff(app.ant.vx.xyz_m(:,2),2)) > eps
-                    uiconfirm(app.UIFigure,"Virtual antenna array is nonuniform! Change antenna positions.",'Array Topology Error!',...
-                        "Options",{'OK'},'Icon','warning');
-                    obj.isFail = false;
-                    return
-                end
-                
-                % And sar step size is correct
-                if app.sar.yStep_m - mean(diff(app.ant.vx.xyz_m(:,2)))*app.ant.vx.numVx > 8*eps
-                    uiconfirm(app.UIFigure,"SAR step size is incorrect!",'SAR Scenario Error!',...
-                        "Options",{'OK'},'Icon','warning');
-                    obj.isFail = false;
-                    return
-                end
+                uiconfirm(app.UIFigure,"SAR step size is incorrect!",'SAR Scenario Error!',...
+                    "Options",{'OK'},'Icon','warning');
+                obj.isFail = true;
+                return
             end
             
             % Everything is okay to continue
@@ -113,6 +114,10 @@ classdef uniform_Y_SAR_Y_FFT
         function [obj,imXYZ_out] = computeReconstruction(obj,app,im)
             obj = update(obj,app,im);
             if ~obj.isFail
+                if app.sar.isMIMO && app.isMult2MonoCheckBox.Value
+                    obj = mult2mono(obj,app);
+                end
+                
                 obj = reconstruct(obj,app);
             end
             imXYZ_out = obj.imXYZ;

@@ -43,7 +43,7 @@ classdef nonuniform_XY_SAR_XYZ_BPA
             
             obj.sarData = reshape(app.target.sarData,[],app.fmcw.ADCSamples);
             
-            obj.isGPU = app.target.isGPU;
+            obj.isGPU = im.isGPU;
             obj.isAmplitudeFactor = app.target.isAmplitudeFactor;
             obj.isMIMO = app.sar.isMIMO;
             
@@ -51,10 +51,12 @@ classdef nonuniform_XY_SAR_XYZ_BPA
         end
         
         function obj = verifyReconstruction(obj,app)
+            obj.isFail = false;
+            
             if app.sar.method ~= "Rectilinear"
                 uiconfirm(app.UIFigure,"Must use 2-D XY SAR scan to use 2-D SAR 3-D BPA image reconstruction method!",'SAR Scenario Error!',...
                     "Options",{'OK'},'Icon','warning');
-                obj.isFail = false;
+                obj.isFail = true;
                 return
             end
         end

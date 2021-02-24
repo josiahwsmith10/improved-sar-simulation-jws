@@ -326,8 +326,8 @@ classdef sarTarget
                     tic
                     if obj.isMIMO
                         obj.R = struct;
-                        obj.R.tx = pdist2(app.sar.rx.xyz_m(indSAR,:),obj.xyz_m);
-                        obj.R.rx = pdist2(app.sar.tx.xyz_m(indSAR,:),obj.xyz_m);
+                        obj.R.tx = pdist2(app.sar.tx.xyz_m(indSAR,:),obj.xyz_m);
+                        obj.R.rx = pdist2(app.sar.rx.xyz_m(indSAR,:),obj.xyz_m);
                         R_T_plus_R_R = obj.R.tx + obj.R.rx;
                         
                         % Amplitude Factor

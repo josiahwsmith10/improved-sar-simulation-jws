@@ -87,9 +87,6 @@ classdef sarScenario
                         return
                     end
                     
-                    % Set no horizontal and no angular scan
-                    app.NumXStepsEditField.Value = 1;
-                    app.NumThetaStepsEditField.Value = 1;
                     obj = getSarScenario(obj,app);
                     obj = getsarAxes(obj);
                     
@@ -121,8 +118,6 @@ classdef sarScenario
                     app.NumYStepsEditField.Enable = true;
                     app.NumThetaStepsEditField.Enable = false;
                     
-                    % Set no angular scan
-                    app.NumThetaStepsEditField.Value = 1;
                     obj = getSarScenario(obj,app);
                     obj = getsarAxes(obj);
                     
@@ -166,9 +161,6 @@ classdef sarScenario
                         return
                     end
                     
-                    % Set no horizontal and no vertical scan
-                    app.NumXStepsEditField.Value = 1;
-                    app.NumYStepsEditField.Value = 1;
                     obj = getSarScenario(obj,app);
                     obj = getsarAxes(obj);
                     
@@ -203,8 +195,6 @@ classdef sarScenario
                         return
                     end
                     
-                    % Set no horizontal scan
-                    app.NumXStepsEditField.Value = 1;
                     obj = getSarScenario(obj,app);
                     obj = getsarAxes(obj);
                     

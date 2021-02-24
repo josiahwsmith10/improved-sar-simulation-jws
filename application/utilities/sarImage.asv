@@ -62,13 +62,11 @@ classdef sarImage
             end
             
             obj = update(obj,app);
+
+            [obj.reconstructor,obj.imXYZ] = obj.reconstructor.computeReconstruction(app,obj);
             
-            if app.ReconstructionAlgorithmDropDown.Value ~= "-"
-                [obj.reconstructor,obj.imXYZ] = obj.reconstructor.computeReconstruction(app,obj);
-                
-                displayImage(obj,app);
-            end            
-                
+            displayImage(obj,app);
+            
             if isempty(obj.reconstructor.isFail) || obj.reconstructor.isFail
                 app.ImageReconstructionCompleteLamp.Color = "red";
             else
@@ -124,15 +122,10 @@ classdef sarImage
                     
                 case "Uniform 2-D CSAR 3-D PFA"
                     obj.reconstructor = uniform_thetaY_CSAR_XYZ_PFA(app,obj);
-                    
-                case "2-D CSAR 3-D BPA"
-                    obj.reconstructor = nonuniform_thetaY_CSAR_XYZ_BPA(app,obj);
+                    obj.reconstructor = nonuniform_thetaY_CSAR_XYZ_BPA(
                     
                 case "Uniform 1-D CSAR 2-D PFA"
-                    obj.reconstructor = uniform_theta_CSAR_XZ_PFA(app,obj);
-                    
-                case "1-D CSAR 2-D BPA"
-                    obj.reconstructor = nonuniform_theta_CSAR_XZ_BPA(app,obj);
+                    obj.reconstructor = uniform_theta_CSAR_XZ_PFA(app,obj);                    
             end
         end
         

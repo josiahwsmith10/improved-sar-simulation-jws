@@ -43,7 +43,7 @@ classdef reconstructionAlgorithmTemplate
             
             obj.sarData = app.target.sarData;
             
-            obj.isGPU = app.target.isGPU;
+            obj.isGPU = im.isGPU;
             obj.isAmplitudeFactor = app.target.isAmplitudeFactor;
             
             obj.k_vec = app.fmcw.k;

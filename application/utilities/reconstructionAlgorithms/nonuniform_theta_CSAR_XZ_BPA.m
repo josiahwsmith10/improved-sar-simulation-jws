@@ -1,4 +1,4 @@
-classdef nonuniform_XY_SAR_XY_BPA
+classdef nonuniform_theta_CSAR_XZ_BPA
     properties
         sarData
         
@@ -16,13 +16,12 @@ classdef nonuniform_XY_SAR_XY_BPA
         isMIMO
         
         k_vec
-        z0_m
         
         estTime
     end
     
     methods
-        function obj = nonuniform_XY_SAR_XY_BPA(app,im)
+        function obj = nonuniform_theta_CSAR_XZ_BPA(app,im)
             obj = update(obj,app,im);
             obj.estTime.old = inf;
             obj.estTime.count = 0;
@@ -37,8 +36,8 @@ classdef nonuniform_XY_SAR_XY_BPA
             obj.rx_xyz_m = app.sar.rx.xyz_m;
             obj.vx_xyz_m = app.sar.vx.xyz_m;
             
-            [X,Y,Z] = ndgrid(im.x_m(:),im.y_m(:),app.ZSliceEditField.Value);
-            obj.sizeTarget = [im.numX,im.numY,1];
+            [X,Y,Z] = ndgrid(im.x_m(:),0,im.z_m(:));
+            obj.sizeTarget = [im.numX,im.numZ];
             
             obj.target_xyz_m = [X(:),Y(:),Z(:)];
             
@@ -54,8 +53,8 @@ classdef nonuniform_XY_SAR_XY_BPA
         function obj = verifyReconstruction(obj,app)
             obj.isFail = false;
             
-            if app.sar.method ~= "Rectilinear"
-                uiconfirm(app.UIFigure,"Must use 2-D XY SAR scan to use 2-D SAR 2-D BPA image reconstruction method!",'SAR Scenario Error!',...
+            if app.sar.method ~= "Circular"
+                uiconfirm(app.UIFigure,"Must use 1-D θ Circular CSAR scan to use 1-D CSAR 2-D BPA image reconstruction method!",'SAR Scenario Error!',...
                     "Options",{'OK'},'Icon','warning');
                 obj.isFail = true;
                 return
@@ -87,7 +86,7 @@ classdef nonuniform_XY_SAR_XY_BPA
             catch
                 d.Title = "Performing XYZ BPA";
                 obj = mediumBPA(obj,k,d);
-            end
+            end            
             
             delete(d)
             try
@@ -106,7 +105,7 @@ classdef nonuniform_XY_SAR_XY_BPA
                 if d.CancelRequested
                     warning("Image not computed!")
                     return;
-                end
+                end                
                 
                 if obj.isMIMO
                     Rt = pdist2(obj.tx_xyz_m,obj.target_xyz_m);
@@ -178,7 +177,7 @@ classdef nonuniform_XY_SAR_XY_BPA
         end
         
         function displayImage(obj,im)
-            displayImage2D(im,im.x_m,im.y_m,"x (m)","y (m)");
+            displayImage2D(im,im.x_m,im.z_m,"x (m)","z (m)");
         end
         
         function outstr = getEstTime(obj,tocs,currentInd,totalInd)

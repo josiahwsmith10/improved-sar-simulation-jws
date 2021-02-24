@@ -1,10 +1,11 @@
-classdef uniform_XY_SAR_XYZ_RMA
+classdef uniform_thetaY_CSAR_XYZ_PFA
     properties
         sarData
         
         nFFTx
         nFFTy
         nFFTz
+        thetaUpsampleFactor
         
         x_m
         y_m
@@ -16,14 +17,15 @@ classdef uniform_XY_SAR_XYZ_RMA
         isAmplitudeFactor
         isFail
         
+        theta_rad_vec
         k_vec
-        z0_m
+        R0_m
         xStep_m
         yStep_m
     end
     
     methods
-        function obj = uniform_XY_SAR_XYZ_RMA(app,im)
+        function obj = uniform_thetaY_CSAR_XYZ_PFA(app,im)
             obj = getParameters(obj,app,im);
             obj = updateApp(obj,app);
         end
@@ -39,6 +41,7 @@ classdef uniform_XY_SAR_XYZ_RMA
             obj.nFFTx = im.nFFTx;
             obj.nFFTy = im.nFFTy;
             obj.nFFTz = im.nFFTz;
+            obj.thetaUpsampleFactor = app.ThetaUpsampleFactorEditField.Value;
             
             obj.x_m = im.x_m;
             obj.y_m = im.y_m;
@@ -49,8 +52,9 @@ classdef uniform_XY_SAR_XYZ_RMA
             obj.isGPU = im.isGPU;
             obj.isAmplitudeFactor = app.target.isAmplitudeFactor;
             
+            obj.theta_rad_vec = app.sar.theta_rad;
             obj.k_vec = app.fmcw.k;
-            obj.z0_m = app.ant.tx.z0_m;
+            obj.R0_m = app.ant.tx.z0_m;
             obj.xStep_m = app.sar.xStep_m;
             obj.yStep_m = app.sar.yStep_m;
         end
@@ -58,15 +62,16 @@ classdef uniform_XY_SAR_XYZ_RMA
         function obj = verifyParameters(obj,app)
             obj.isFail = false;
             
-            kZU = single(reshape(linspace(0,2*max(obj.k_vec) - 2*max(obj.k_vec)/obj.nFFTz,obj.nFFTz),1,1,[]));
-            dkZU = kZU(2) - kZU(1);
-            x_m_temp = make_x(obj,app.sar.xStep_m,obj.nFFTx);
-            y_m_temp = make_x(obj,app.sar.yStep_m,obj.nFFTy);
-            z_m_temp = single(2*pi / (dkZU * obj.nFFTz) * (1:obj.nFFTz));
+            [x_m_temp,y_m_temp,z_m_temp] = getTempXYZ(obj);
             
-            % Resize Image
             if max(abs(obj.x_m)) > max(abs(x_m_temp))
                 uiconfirm(app.UIFigure,"X Max (m) is too large for Number of X FFT Points. Decrease X Max (m) or increase Number of X FFT Points",'Imaging Parameter Error!',...
+                    "Options",{'OK'},'Icon','warning');
+                obj.isFail = true;
+                return;
+            end
+            if obj.thetaUpsampleFactor*app.sar.numTheta > obj.nFFTx
+                uiconfirm(app.UIFigure,"θ Upsample Factor is too large for Number of X FFT Points. Decrease θ Upsample Factor or increase Number of X FFT Points",'Imaging Parameter Error!',...
                     "Options",{'OK'},'Icon','warning');
                 obj.isFail = true;
                 return;
@@ -86,8 +91,8 @@ classdef uniform_XY_SAR_XYZ_RMA
         end
         
         function obj = verifyReconstruction(obj,app)
-            if app.sar.method ~= "Rectilinear"
-                uiconfirm(app.UIFigure,"Must use 2-D XY SAR scan to use 2-D SAR 3-D RMA image reconstruction method!",'SAR Scenario Error!',...
+            if app.sar.method ~= "Cylindrical"
+                uiconfirm(app.UIFigure,"Must use 2-D θY Cylindrical CSAR scan to use 2-D CSAR 3-D PFA image reconstruction method!",'SAR Scenario Error!',...
                     "Options",{'OK'},'Icon','warning');
                 obj.isFail = true;
                 return
@@ -130,20 +135,46 @@ classdef uniform_XY_SAR_XYZ_RMA
         end
         
         function obj = updateApp(obj,app)
-            kZU = single(reshape(linspace(0,2*max(obj.k_vec) - 2*max(obj.k_vec)/obj.nFFTz,obj.nFFTz),1,1,[]));
+            [x_m_temp,y_m_temp,z_m_temp] = getTempXYZ(obj);
+            
+            app.XMinmEditField_im_4.Value = min(x_m_temp);
+            app.XMaxmEditField_im_4.Value = max(x_m_temp);
+            
+            app.YMinmEditField_im_6.Value = min(y_m_temp);
+            app.YMaxmEditField_im_6.Value = max(y_m_temp);
+            
+            app.ZMinmEditField_im_4.Value = min(z_m_temp);
+            app.ZMaxmEditField_im_4.Value = max(z_m_temp);
+        end
+        
+        function [x_m_temp,y_m_temp,z_m_temp] = getTempXYZ(obj)
+            theta_rad = single(reshape(obj.theta_rad_vec,1,[]));
+            
+            % Compute Wavenumbers
+            k = single(reshape(obj.k_vec,1,1,[]));
+            
+            L_y = obj.nFFTy * obj.yStep_m;
+            dkY = 2*pi/L_y;
+            kY = make_kX(obj,dkY,obj.nFFTy)';
+            
+            kR = single(sqrt(4 * k.^2 - kY.^2) .* (4 * k.^2 > kY.^2));
+            kX = kR.*cos(theta_rad);
+            kZ = kR.*sin(theta_rad);
+            
+            kXmax = max(kX,[],'all');
+            kZmax = max(kZ,[],'all');
+            kXmin = min(kX,[],'all');
+            kZmin = min(kZ,[],'all');
+            clear kX kZ
+            
+            kXU = single(reshape(linspace(kXmin,kXmax,obj.nFFTx),1,[],1));
+            kZU = single(reshape(linspace(kZmin,kZmax,obj.nFFTz),1,1,[]));
+            dkXU = kXU(2) - kXU(1);
             dkZU = kZU(2) - kZU(1);
-            x_m_temp = double(make_x(obj,obj.xStep_m,obj.nFFTx));
+            
+            x_m_temp = double(make_x(obj,2*pi/(dkXU*obj.nFFTx),obj.nFFTx));
             y_m_temp = double(make_x(obj,obj.yStep_m,obj.nFFTy));
-            z_m_temp = double(2*pi / (dkZU * obj.nFFTz) * (0:obj.nFFTz-1));
-            
-            app.XMinmEditField_im_2.Value = min(x_m_temp);
-            app.XMaxmEditField_im_2.Value = max(x_m_temp);
-            
-            app.YMinmEditField_im_2.Value = min(y_m_temp);
-            app.YMaxmEditField_im_2.Value = max(y_m_temp);
-            
-            app.ZMinmEditField_im_2.Value = min(z_m_temp);
-            app.ZMaxmEditField_im_2.Value = max(z_m_temp);
+            z_m_temp = double(make_x(obj,2*pi/(dkZU*obj.nFFTz),obj.nFFTz));
         end
         
         function [obj,imXYZ_out] = computeReconstruction(obj,app,im)
@@ -154,89 +185,121 @@ classdef uniform_XY_SAR_XYZ_RMA
                     obj = mult2mono(obj,app);
                 end
                 
+%                 obj = reconstruct4segs(obj,app);
                 obj = reconstruct(obj,app);
             end
-            imXYZ_out = obj.imXYZ;
+            imXYZ_out = abs(obj.imXYZ);
         end
+        
+%         function obj = reconstruct4segs(obj,app)
+%             theta_rad_orig = obj.theta_rad_vec;
+%             sarData_orig = obj.sarData;
+%             
+%             % 1st segment
+%             obj.theta_rad_vec = theta_rad_orig(1:end/4);
+%             obj.sarData = sarData_orig(:,1:end/4,:);
+%             obj = reconstruct(obj,app);
+%             im1 = obj.imXYZ;
+%             
+%             % 2nd segment
+%             obj.theta_rad_vec = theta_rad_orig(end/4+1:end/2);
+%             obj.sarData = sarData_orig(:,end/4+1:end/2,:);
+%             obj = reconstruct(obj,app);
+%             im2 = obj.imXYZ;
+%             
+%             % 3rd segment
+%             obj.theta_rad_vec = theta_rad_orig(end/2+1:end*3/4);
+%             obj.sarData = sarData_orig(:,end/2+1:end*3/4,:);
+%             obj = reconstruct(obj,app);
+%             im3 = obj.imXYZ;
+%             
+%             % 4th segment
+%             obj.theta_rad_vec = theta_rad_orig(end*3/4+1:end);
+%             obj.sarData = sarData_orig(:,end*3/4+1:end,:);
+%             obj = reconstruct(obj,app);
+%             im4 = obj.imXYZ;
+%             
+%             obj.imXYZ = im1 + im2 + im3 + im4;
+%         end
         
         function obj = reconstruct(obj,app)
             % Start the Progress Bar
             d = uiprogressdlg(app.UIFigure,'Title','Please Wait',...
-                'Message','Reconstructing Image using Uniform RMA ');
+                'Message','Reconstructing Image using Uniform PFA ');
             
-            % sarData is of size (sar.numY, sar.numX, fmcw.ADCSamples)
+            % sarData is of size (sar.numY, sar.numTheta, fmcw.ADCSamples)
             d.Value = 1/10;
             
-            % Zero-Pad Data: s(y,x,k)
+            % Zero-Pad Data: s(y,theta,k)
             sarDataPadded = obj.sarData;
             sarDataPadded = padarray(sarDataPadded,[floor((obj.nFFTy-size(obj.sarData,1))/2) 0],0,'pre');
-            sarDataPadded = padarray(sarDataPadded,[0 floor((obj.nFFTx-size(obj.sarData,2))/2)],0,'pre');
-            clear sarData
             d.Value = 2/10;
+            
+            theta_rad = single(reshape(obj.theta_rad_vec,1,[]));
             
             % Compute Wavenumbers
             k = single(reshape(obj.k_vec,1,1,[]));
-            L_x = obj.nFFTx * obj.xStep_m;
-            dkX = 2*pi/L_x;
-            kX = make_kX(obj,dkX,obj.nFFTx);
             
             L_y = obj.nFFTy * obj.yStep_m;
             dkY = 2*pi/L_y;
             kY = make_kX(obj,dkY,obj.nFFTy)';
             
-            kZU = single(reshape(linspace(0,2*max(k) - 2*max(k)/obj.nFFTz,obj.nFFTz),1,1,[]));
+            kR = single(sqrt(4 * k.^2 - kY.^2) .* (4 * k.^2 > kY.^2));
+            kX = kR.*cos(theta_rad);
+            kZ = kR.*sin(theta_rad);
+            
+            kXmax = max(kX,[],'all');
+            kZmax = max(kZ,[],'all');
+            kXmin = min(kX,[],'all');
+            kZmin = min(kZ,[],'all');
+            clear kX kZ
+            
+            kYU = repmat(kY,[1,obj.nFFTx,obj.nFFTz]);
+            kXU = single(reshape(linspace(kXmin,kXmax,obj.nFFTx),1,[],1));
+            kZU = single(reshape(linspace(kZmin,kZmax,obj.nFFTz),1,1,[]));
+            dkXU = kXU(2) - kXU(1);
             dkZU = kZU(2) - kZU(1);
+            
+            % Declare Uniform Grid for Interpolation
+            theta_radU = repmat(atan2(kZU,kXU),[obj.nFFTy,1,1]);
+            kU = 1/2*sqrt(kXU.^2 + kZU.^2 + kY.^2);
+            clear kXU kZU
+            d.Value = 3/10;
+            
+            % Upsample data
+            if obj.thetaUpsampleFactor > 1
+                theta_radUp = single(reshape(linspace(theta_rad(1),theta_rad(end),length(theta_rad)*obj.thetaUpsampleFactor),1,[]));
+                [Y,T,K] = ndgrid(single(1:size(sarDataPadded,1))',theta_radUp,reshape(single(1:size(sarDataPadded,3)),1,1,[]));
+                sarDataPadded = interpn(single(1:size(sarDataPadded,1))',theta_rad(:),single(1:size(sarDataPadded,3))',sarDataPadded,Y,T,K);
+                clear Y T K
+                theta_rad = theta_radUp;
+            end
+            d.Value = 3.5/10;
+            
+            % Compute Azimuth Filter H(kY,Theta,k)
+            azimuthFilterFFT = single(fft(exp(1j*kR*obj.R0_m.*cos(theta_rad)),[],2));
+            clear kR
+            d.Value = 4/10;
+            
+            % Compute Azimuth Filtered Data: p(kY,theta,k) = IFT_Theta[ S(kY,Theta,k) * H*(kY,Theta,k)]
+            azimuthFiltered = ifft(fftshift(fft(fft(sarDataPadded,[],2),obj.nFFTy,1),1) .* conj(azimuthFilterFFT),[],2);
+            clear azimuthFilterFFT sarDataPadded
+            d.Value = 5/10;
             
             if obj.isGPU
                 reset(gpuDevice)
-                k = gpuArray(k);
-                kX = gpuArray(kX);
                 kY = gpuArray(kY);
-                kZU = gpuArray(kZU);
-                sarDataPadded = gpuArray(sarDataPadded);
+                theta_rad = gpuArray(theta_rad);
+                k = gpuArray(k);
+                azimuthFiltered = gpuArray(azimuthFiltered);
+                kYU = gpuArray(kYU);
+                theta_radU = gpuArray(theta_radU);
+                kU = gpuArray(kU);
             end
-            
-            kYU = repmat(kY,[1,obj.nFFTx,obj.nFFTz]);
-            kXU = repmat(kX,[obj.nFFTy,1,obj.nFFTz]);
-            kU = single(1/2 * sqrt(kX.^2 + kY.^2 + kZU.^2));
-            kZ = single(sqrt((4 * k.^2 - kX.^2 - kY.^2) .* (4 * k.^2 > kX.^2 + kY.^2)));
-            d.Value = 3/10;
-            
-            % Compute Focusing Filter
-            focusingFilter = exp(-1j * kZ * obj.z0_m);
-            if obj.isAmplitudeFactor
-                focusingFilter = kZ .* focusingFilter;
-            end
-            focusingFilter(4 * k.^2 < kX.^2 + kY.^2) = 0;
-            d.Value = 4/10;
-            
-            % Compute FFT across Y & X Dimensions: S(kY,kX,k)
-            sarDataFFT = fftshift(fftshift(fft(fft(conj(sarDataPadded),obj.nFFTy,1),obj.nFFTx,2),1),2)/obj.nFFTx/obj.nFFTy;
-            clear sarDataPadded sarData
-            
-            if obj.isGPU
-                focusingFilter = gpuArray(focusingFilter);
-            end
-            d.Value = 5/10;
             
             % Stolt Interpolation
-            try
-                sarImageFFT = interpn(kY(:),kX(:),k(:), sarDataFFT .* focusingFilter ,kYU,kXU,kU,'linear',0);
-            catch
-                sarImageFFT = zeros(size(kU));
-                for indkY = 1:size(kU,1)
-                    for indkX = 1:size(kU,2)
-                        tempS = squeeze(sarDataFFT(indkY,indkX,:) .* focusingFilter(indkY,indkX,:));
-                        kZTemp = squeeze(kZ(indkY,indkX,:));
-                        [kZTemp_unique,~,ind_c] = uniquetol(kZTemp);
-                        tempS = accumarray(ind_c,tempS);
-                        if length(kZTemp_unique) > 2
-                            sarImageFFT(indkY,indkX,:) = gather(interp1(kZTemp_unique,tempS,kZU,'nearest',0));
-                        end
-                    end
-                end
-            end
-            clear sarDataFFT focusingFilter kY kX k kYU kXU kU kZ kZU
+            sarImageFFT = interpn(kY(:),theta_rad(:),k(:), azimuthFiltered ,kYU,theta_radU,kU,'linear',0);
+            clear azimuthFiltered kY theta_rad k azimuthfiltered kYU theta_radU kU
             
             if obj.isGPU
                 sarImageFFT = gather(sarImageFFT);
@@ -246,8 +309,8 @@ classdef uniform_XY_SAR_XYZ_RMA
             d.Value = 6/10;
             
             % Recover Image by IFT: p(y,x,z)
-            sarImage = single(abs(ifftn(sarImageFFT)));
-            clear sarImageFFT focusingFilter
+            sarImage = single(ifftshift(ifftshift(ifftn(sarImageFFT),2),3));
+            clear sarImageFFT
             d.Value = 7/10;
             
             % Reorient Image: p(x,y,z)
@@ -255,9 +318,9 @@ classdef uniform_XY_SAR_XYZ_RMA
             d.Value = 8/10;
             
             % Declare Spatial Vectors
-            x_m_temp = make_x(obj,obj.xStep_m,obj.nFFTx);
+            x_m_temp = make_x(obj,2*pi/(dkXU*obj.nFFTx),obj.nFFTx);
             y_m_temp = make_x(obj,obj.yStep_m,obj.nFFTy);
-            z_m_temp = single(2*pi / (dkZU * obj.nFFTz) * (1:obj.nFFTz));
+            z_m_temp = make_x(obj,2*pi/(dkZU*obj.nFFTz),obj.nFFTz);
             d.Value = 9/10;
             
             [X,Y,Z] = ndgrid(obj.x_m(:),obj.y_m(:),obj.z_m(:));
