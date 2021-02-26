@@ -16,8 +16,8 @@ classdef sarTarget < handle
         amp
         R
         
-        png = struct('isLoaded',false)
-        stl = struct('isLoaded',false)
+        png = struct('isLoaded',false,'fileNameLoaded',"")
+        stl = struct('isLoaded',false,'fileNameLoaded',"")
         rp
         
         sarData
@@ -69,7 +69,7 @@ classdef sarTarget < handle
         end
         
         function getPNGTarget(obj)
-            if ~obj.png.isLoaded || obj.png.fileNameLoaded ~= obj.png.fileName
+            if ~obj.png.isLoaded || string(obj.png.fileNameLoaded) ~= string(obj.png.fileName)
                 loadPNG(obj);
             end
             
@@ -98,6 +98,7 @@ classdef sarTarget < handle
                 obj.png.tMat = imread("./saved/pngstl/" + obj.png.fileName);
             catch
                 obj.png.isLoaded = false;
+                obj.isPNG = false;
                 error("Invalid png.fileName value!");
             end
             obj.png.tMat = obj.png.tMat(:,:,1);
@@ -111,7 +112,7 @@ classdef sarTarget < handle
         end
         
         function getSTLTarget(obj)
-            if ~obj.stl.isLoaded || obj.stl.fileNameLoaded ~= obj.stl.fileName
+            if ~obj.stl.isLoaded || string(obj.stl.fileNameLoaded) ~= string(obj.stl.fileName)
                 loadSTL(obj);
             end
             
@@ -139,10 +140,12 @@ classdef sarTarget < handle
                 [~,obj.stl.v] = stlread2011("./saved/pngstl/" + obj.stl.fileName);
             catch
                 obj.stl.isLoaded = false;
+                obj.isSTL = false;
                 error("Invalid stl.fileName value!")
             end
             obj.stl.v = obj.stl.v*1e-3;
             obj.stl.isLoaded = true;
+            obj.stl.fileNameLoaded = obj.stl.fileName;
         end
         
         function getRandomTarget(obj)

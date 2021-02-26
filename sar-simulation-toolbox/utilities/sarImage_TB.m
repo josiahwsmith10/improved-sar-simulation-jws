@@ -73,6 +73,7 @@ target.png.xStep_m = 1e-3;
 target.png.yStep_m = 1e-3;
 target.png.xOffset_m = -0.025;
 target.png.yOffset_m = 0.05;
+target.png.zOffset_m = 0.25;
 target.png.reflectivity = 1;
 target.png.downsampleFactor = 4;
 
