@@ -65,24 +65,41 @@ sar.displaySarScenario();
 target.isAmplitudeFactor = false;
 
 target.tableTarget = [
-    0   0   0   1];
+    0   0   0.25    1
+    0   0.1 0.25    1];
+
+target.png.fileName = 'circle.png';
+target.png.xStep_m = 1e-3;
+target.png.yStep_m = 1e-3;
+target.png.xOffset_m = -0.025;
+target.png.yOffset_m = 0.05;
+target.png.zOffset_m = 0;
+target.png.reflectivity = 1;
+target.png.downsampleFactor = 4;
+
+target.stl.fileName = 'maleTorso.stl';
+target.stl.zCrop_m = 0.25;
+target.stl.xOffset_m = 0;
+target.stl.yOffset_m = 0;
+target.stl.zOffset_m = 0;
+target.stl.reflectivity = 1;
+target.stl.downsampleFactor = 40;
 
 target.rp.numTargets = 16;
 target.rp.xMin_m = -0.1;
 target.rp.xMax_m = 0.1;
-target.rp.yMin_m = 0;
-target.rp.yMax_m = 0;
-target.rp.zMin_m = -0.1;
-target.rp.zMax_m = 0.1;
+target.rp.yMin_m = -0.1;
+target.rp.yMax_m = 0.1;
+target.rp.zMin_m = 0.25;
+target.rp.zMax_m = 0.35;
 target.rp.ampMin = 0.5;
 target.rp.ampMax = 1;
 
 % Which to use
 target.isTable = true;
+target.isPNG = false;
+target.isSTL = false;
 target.isRandomPoints = false;
-
-% Display the target
-target.displayTarget();
 
 %% Compute Beat Signal
 %-------------------------------------------------------------------------%
