@@ -1,8 +1,6 @@
 function displayImage3D(im)
 h = im.fig.h;
-if isempty(im.vSliceIndex)
-    im.vSliceIndex = 1:length(im.z_m);
-end
+im.vSliceIndex = 1:length(im.z_m);
 
 % Organize in meshgrid format
 imgZXY = permute(im.imXYZ,[3,1,2]);
