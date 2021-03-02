@@ -1,25 +1,30 @@
 classdef antennaArray_app < handle
+    % antennaArray_app An antennaArray_app object holds the properties and methods
+    % of the MIMO antenna array as specified by the user
+    
     properties
-        tx
-        rx
-        vx
-        fmcw
+        tx = struct('xy_m',[],'xyz_m',[])   % Structure containing the parameters (location, etc.) of the transmitter antennas
+        rx = struct('xy_m',[],'xyz_m',[])   % Structure containing the parameters (location, etc.) of the receiver antennas
+        vx = struct('xy_m','xyz_m')         % Structure containing the parameters (location, etc.) of the virtual element antennas
+        fmcw                                % An fmcwChirpParameters object
         
-        % For save/load
-        TxTable
-        RxTable
+        TxTable                             % Table of transmitter antenna locations and states
+        RxTable                             % Table of receiver antenna locations and states
         
-        fig
+        fig                                 % Structure containing the figure and handle used for showing the antenna array
         
-        isMIMO
+        isMIMO                              % Boolean whether or not to use the MIMO physical element locations instead of the equivalent phase center virtual element locations
     end
+    
     methods
         function obj = antennaArray_app(app)
+            % Initializes the figures and updates the antenna array
             obj = initializeFigures(obj,app);
             obj = update(obj,app);
         end
         
         function obj = update(obj,app)
+            % Updates the antenna array from the values in the app
             obj = getAntennaArray(obj,app);
             obj = computeAntennaArray(obj);
             if verifyMIMO(obj,app)
@@ -30,6 +35,7 @@ classdef antennaArray_app < handle
         end
         
         function obj = getAntennaArray(obj,app)
+            % Gets the antenna array values from the app
             obj.isMIMO = verifyMIMO(obj,app);
             obj.fmcw = app.fmcw;
             obj.tx.z0_m = app.TransmitterZmEditField.Value;
@@ -39,6 +45,8 @@ classdef antennaArray_app < handle
         end
         
         function obj = computeAntennaArray(obj)
+            % Computes the physical and virtual antenna locations
+            
             % Get number or Tx, Rx, and Vx
             obj.tx.numTx = sum(obj.tx.xy_m(:,5));
             obj.rx.numRx = sum(obj.rx.xy_m(:,5));
@@ -86,8 +94,9 @@ classdef antennaArray_app < handle
             obj.vx.xyz_m = obj.vx.xyz_m - temp;
         end
         
-        % Plot/figure functions
         function obj = initializeFigures(obj,app)
+            % Initializes the figures
+            
             closeFigures(obj)
             
             try
@@ -105,6 +114,8 @@ classdef antennaArray_app < handle
         end
         
         function closeFigures(obj)
+            % Attempts to close the figures
+            
             try
                 close(obj.fig.f)
             catch
@@ -112,6 +123,8 @@ classdef antennaArray_app < handle
         end
         
         function displayAntennaArray(obj)
+            % Plots the MIMO antenna array
+            
             if ~obj.tx.numTx || ~obj.rx.numRx
                 return;
             end
@@ -130,6 +143,8 @@ classdef antennaArray_app < handle
         end
         
         function displayVirtualAntennaArray(obj)
+            % Plots the virtual array
+            
             if ~obj.tx.numTx || ~obj.rx.numRx
                 return;
             end
@@ -146,10 +161,11 @@ classdef antennaArray_app < handle
             title(h,"Virtual Array (x-y)")
         end
         
-        
-        % Save/load functions
         function saveAntennaArray(obj,app)
-            if exist(app.ArraySaveNameEditField.Value + ".mat",'file')
+            % Saves the antennaArray_app object
+            
+            savePathFull = "./saved/antennaArrays/" + app.ArraySaveNameEditField.Value + ".mat";
+            if exist(savePathFull,'file')
                 selection = uiconfirm(app.UIFigure,'Are you sure you want to overwrite?','Confirm Overwrite',...
                     'Icon','warning');
                 if string(selection) == "Cancel"
@@ -161,19 +177,20 @@ classdef antennaArray_app < handle
             obj.TxTable.Data = app.TxTable.Data;
             obj.RxTable.Data = app.RxTable.Data;
             savedant = obj;
-            savePathFull = "./saved/antennaArrays/" + app.ArraySaveNameEditField.Value + ".mat";
             save(savePathFull,"savedant");
         end
         
         function obj = loadAntennaArray(obj,app)
-            if ~exist(app.ArrayLoadNameEditField.Value + ".mat",'file')
+            % Loads the antennaArray_app object
+            
+            loadPathFull = "./saved/antennaArrays/" + app.ArrayLoadNameEditField.Value + ".mat";
+            if ~exist(loadPathFull,'file')
                 uiconfirm(app.UIFigure,"No file called " + app.ArrayLoadNameEditField.Value + ".mat to load",'Cannot Load',...
                     "Options",{'OK'},'Icon','warning');
                 warning("Antenna array not loaded!");
                 return;
             end
             
-            loadPathFull = "./saved/antennaArrays/" + app.ArrayLoadNameEditField.Value + ".mat";
             load(loadPathFull,"savedant");
             
             app.TxTable.Data = savedant.TxTable.Data;
@@ -182,8 +199,9 @@ classdef antennaArray_app < handle
             obj = update(obj,app);
         end
         
-        
         function tf = verifyMIMO(obj,app)
+            % Verifies if the user has specified MIMO or EPC in the app
+            
             if app.MIMOSwitch.Value == "Use MIMO Array"
                 tf = true;
             elseif app.MIMOSwitch.Value == "Use EPC Virtual Elements"

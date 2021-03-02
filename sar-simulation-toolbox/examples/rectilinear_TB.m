@@ -1,17 +1,14 @@
 %% Include Necessary Directories
-%-------------------------------------------------------------------------%
-addpath(genpath("./"));
+addpath(genpath("../"));
 
 %% Create the Objects
-%-------------------------------------------------------------------------%
 fmcw = fmcwChirpParameters();
-ant = antennaArray(fmcw);
+ant = sarAntennaArray(fmcw);
 sar = sarScenario(ant);
 target = sarTarget(fmcw,ant,sar);
 im = sarImage(fmcw,ant,sar,target);
 
 %% Set FMCW Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of an fmcwChirpParameters object are changed by the
 % user, the object automatically updates itself, namely the property 'k'
 % and other dependencies of the changed parameters.
@@ -26,7 +23,6 @@ fmcw.RampEndTime_s = 39.98*1e-6;
 fmcw.fC = 79*1e9;
 
 %% Set Antenna Array Properties
-%-------------------------------------------------------------------------%
 % When the parameters of an antennaArray object are changed by the user, 
 % the object automatically updates itself
 ant.isEPC = false;
@@ -46,7 +42,6 @@ ant.tableRx = [
 ant.displayAntennaArray();
 
 %% Set SAR Scenario Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of a sarScenario object are changed by the user, the
 % object automatically updates itself
 sar.scanMethod = 'Rectilinear';
@@ -59,7 +54,6 @@ sar.numY = 25;
 sar.displaySarScenario();
 
 %% Set Target Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of a sarTarget object are changed by the user, the
 % object automatically updates itself
 target.isAmplitudeFactor = false;
@@ -105,12 +99,10 @@ target.isRandomPoints = false;
 target.displayTarget();
 
 %% Compute Beat Signal
-%-------------------------------------------------------------------------%
 target.isGPU = true;
 target.computeTarget();
 
 %% Set Image Reconstruction Parameters and Create sarImage Object
-%-------------------------------------------------------------------------%
 % When the parameters of a sarImage object are changed by the user, the
 % object automatically updates itself
 im.nFFTx = 512;
@@ -138,11 +130,9 @@ im.isMult2Mono = true;
 im.zRef_m = 0.25;
 
 %% Reconstruct the Image
-%-------------------------------------------------------------------------%
 im.computeImage();
 
 %% Display the Image with Different Parameters
-%-------------------------------------------------------------------------%
 im.dBMin = -30;
 im.fontSize = 12;
 im.displayImage();

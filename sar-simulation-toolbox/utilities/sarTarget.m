@@ -1,34 +1,50 @@
 classdef sarTarget < handle
+    % sarTarget A sarTarget object holds the properties and methods used in the FMCW MIMO-SAR scenario as specified by the user 
+    
+    properties
+        isGPU = true                % Boolean whether or not to use the GPU for beat signal computation
+        isLong = false              % Boolean whether or not to use the long beat signal computation method
+        numTargets = 0              % Number of target voxels
+        xyz_m                       % Target x-y-z locations as a (numTargets)x3 array 
+        amp                         % Column vector of target reflectivities
+        R                           % Radial distances from antennas to target (MIMO or EPC)
+    end
+    
     properties(SetObservable)
-        isGPU = true
-        isTable = false
-        isPNG = false
-        isSTL = false
-        isRandomPoints = false
+        isAmplitudeFactor = false   % Boolean whether or not to include the amplitude factor (path loss) in the beat signal computation
+        isTable = false             % Boolean whether or not to include the table of targets
+        isPNG = false               % Boolean whether or not to include the PNG file as a target
+        isSTL = false               % Boolean whether or not to include the STL file as a target
+        isRandomPoints = false      % Boolean whether or not to include the random points as a target
         
+        % tableTarget - Array containing the x-y-z location of the targets
+        % and their corresponding reflectivities in the form:
+        %   |   x   |   y   |   z   |   r   |
+        %   |   0   |   0   |   0   |   1   |
+        % Where the example has a target located at (x,y,z) = (0,0,0) with
+        % a reflectivity of 1
         tableTarget = [0 0 0 0]
         
-        isAmplitudeFactor = false
+        png = struct('isLoaded',false,'fileNameLoaded',"") % Structure containing the parameters of the PNG target
+        stl = struct('isLoaded',false,'fileNameLoaded',"") % Structure containing the parameters of the STL target
+        rp                          % Structure containing the parameters of the random point targets
         
-        isLong = false
-        numTargets = 0
-        xyz_m
-        amp
-        R
+        sarData                     % Computed beat signal
         
-        png = struct('isLoaded',false,'fileNameLoaded',"")
-        stl = struct('isLoaded',false,'fileNameLoaded',"")
-        rp
-        
-        sarData
-        
-        fig = struct('f',[],'h',[])
-        fmcw
-        ant
-        sar
+        fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
+        fmcw                        % An fmcwChirpParameters object
+        ant                         % A sarAntennaArray object
+        sar                         % A sarScenario object
     end
+    
     methods
         function obj = sarTarget(fmcw,ant,sar)
+            % Attaches the listener to the sarTarget object so
+            % observable properties can be watched for changes and sets the
+            % necessary parameters from the other SAR and FMCW type
+            % objects. Then verifies whether the GPU can be used, if
+            % necessary
+            
             attachListener(obj)
             obj.fmcw = fmcw;
             obj.ant = ant;
@@ -38,6 +54,10 @@ classdef sarTarget < handle
         end
         
         function getTarget(obj)
+            % Gets the target parameters using the methods
+            % (table/png/stl/randompoints) specified by the user, then
+            % verifies the GPU can be used, if necessary
+            
             obj.xyz_m = [];
             obj.amp = [];
             
@@ -57,9 +77,13 @@ classdef sarTarget < handle
             obj.numTargets = size(obj.xyz_m,1);
             obj.xyz_m = single(obj.xyz_m);
             obj.amp = single(obj.xyz_m);
+            
+            verifyGPU(obj);
         end
         
         function getTargetTable(obj)
+            % Gets the positions and amplitudes from the table of targets
+            
             temp_table = single(obj.tableTarget);
             
             temp_xyz_m = temp_table(:,1:3);
@@ -69,6 +93,8 @@ classdef sarTarget < handle
         end
         
         function getPNGTarget(obj)
+            % Gets the positions and amplitudes from the PNG target
+            
             if ~obj.png.isLoaded || string(obj.png.fileNameLoaded) ~= string(obj.png.fileName)
                 loadPNG(obj);
             end
@@ -94,6 +120,9 @@ classdef sarTarget < handle
         end
         
         function loadPNG(obj)
+            % Loads the PNG file and updates png.isLoaded and
+            % png.fileNameLoaded
+            
             try
                 obj.png.tMat = imread("./saved/pngstl/" + obj.png.fileName);
             catch
@@ -112,6 +141,8 @@ classdef sarTarget < handle
         end
         
         function getSTLTarget(obj)
+            % Gets the positions and amplitudes from the STL target
+            
             if ~obj.stl.isLoaded || string(obj.stl.fileNameLoaded) ~= string(obj.stl.fileName)
                 loadSTL(obj);
             end
@@ -136,6 +167,9 @@ classdef sarTarget < handle
         end
         
         function loadSTL(obj)
+            % Loads the STL file and updates stl.isLoaded and
+            % stl.fileNameLoaded
+            
             try
                 [~,obj.stl.v] = stlread2011("./saved/pngstl/" + obj.stl.fileName);
             catch
@@ -149,6 +183,8 @@ classdef sarTarget < handle
         end
         
         function getRandomTarget(obj)
+            % Generates the random targets given the parameters
+            
             temp_x = obj.rp.xMin_m + (obj.rp.xMax_m - obj.rp.xMin_m)*rand(obj.rp.numTargets,1);
             temp_y = obj.rp.yMin_m + (obj.rp.yMax_m - obj.rp.yMin_m)*rand(obj.rp.numTargets,1);
             temp_z = obj.rp.zMin_m + (obj.rp.zMax_m - obj.rp.zMin_m)*rand(obj.rp.numTargets,1);
@@ -161,6 +197,9 @@ classdef sarTarget < handle
         end
         
         function computeTarget(obj)
+            % Computes the beat signal. First attempts the fast method then
+            % the slow method, if the fast method fails
+            
             if obj.isGPU
                 reset(gpuDevice)
             end
@@ -234,7 +273,7 @@ classdef sarTarget < handle
                     obj.sarData(:,indK) = single(gather(sum(temp,2)));
                     % Update the progress dialog
                     tocs(indK) = toc;
-                    waitbar(indK/obj.fmcw.ADCSamples,d,"Generating Beat Signal. Estimated Time Remaining: " + getEstTime(obj,tocs,indK,obj.fmcw.ADCSamples));
+                    waitbar(indK/obj.fmcw.ADCSamples,d,"Generating Beat Signal. Estimated Time Remaining: " + getEstTime(tocs,indK,obj.fmcw.ADCSamples));
                 end
             catch
                 % Always works method
@@ -287,7 +326,7 @@ classdef sarTarget < handle
                         obj.sarData(indSAR,indK) = single(gather(sum(temp,2)));
                         % Update the progress dialog
                         tocs(count) = toc;
-                        waitbar(count/(obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)),d,"Generating Beat Signal Using Slow Method. Estimated Time Remaining: " + getEstTime(obj,tocs,count,obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)));
+                        waitbar(count/(obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)),d,"Generating Beat Signal Using Slow Method. Estimated Time Remaining: " + getEstTime(tocs,count,obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)));
                     end
                 end
             end
@@ -298,28 +337,10 @@ classdef sarTarget < handle
             obj.sarData = reshape(obj.sarData,[obj.sar.sarSize,obj.fmcw.ADCSamples]);
         end
         
-        function outstr = getEstTime(obj,tocs,currentInd,totalInd)
-            avgtoc = mean(tocs(1:currentInd))*(totalInd - currentInd);
-            hrrem = floor(avgtoc/3600);
-            avgtoc = avgtoc - floor(avgtoc/3600)*3600;
-            minrem = floor(avgtoc/60);
-            avgtoc = avgtoc - floor(avgtoc/60)*60;
-            secrem = round(avgtoc);
-            
-            if hrrem < 10
-                hrrem = "0" + hrrem;
-            end
-            if minrem < 10
-                minrem = "0" + minrem;
-            end
-            if secrem < 10
-                secrem = "0" + secrem;
-            end
-            outstr = hrrem + ":" + minrem + ":" + secrem;
-        end
-        
         % Plot/figure functions
         function initializeFigures(obj)
+            % Initializes the figures
+            
             closeFigures(obj);
             set(0,'DefaultFigureWindowStyle','docked')
             
@@ -329,6 +350,8 @@ classdef sarTarget < handle
         end
         
         function closeFigures(obj)
+            % Attempt to close the figures
+            
             try
                 close(obj.fig.f)
             catch
@@ -336,6 +359,8 @@ classdef sarTarget < handle
         end
         
         function displayTarget(obj)
+            % Display the target scenario
+            
             if isempty(obj.xyz_m)
                 return;
             end
@@ -352,6 +377,8 @@ classdef sarTarget < handle
         end
         
         function displayTargetMIMO(obj)
+            % Plot the target with the MIMO-SAR scenario
+            
             h = obj.fig.h;
             hold(h,'off')
             temp = obj.sar.tx.xyz_m;
@@ -385,6 +412,8 @@ classdef sarTarget < handle
         end
         
         function displayTargetEPC(obj)
+            % Plot the target with the virtual array SAR scenario
+            
             h = obj.fig.h;
             hold(h,'off')
             temp = obj.sar.vx.xyz_m;
@@ -415,10 +444,10 @@ classdef sarTarget < handle
             daspect(h,[1 1 1])
         end
         
-        % Save/load functions
         function saveTarget(obj,saveName)
-            savePathFull = "./saved/targets/" + saveName + ".mat";
-            if exist(savePathFull,'file')
+            % Save the sarTarget object to a file
+            
+            if exist(saveName,'file')
                 str = input('Are you sure you want to overwrite? Y/N: ','s');
                 if str ~= 'Y'
                     warning("Target not saved!");
@@ -430,11 +459,13 @@ classdef sarTarget < handle
             savedtarget.fig = [];
             savedtarget.ant = [];
             savedtarget.sar = [];
-            save(savePathFull,"savedtarget");
+            save(saveName,"savedtarget");
             disp("Target saved to: " + savePathFull);
         end
         
         function loadTarget(obj,loadName)
+            % Loads a sartarget object from a file
+            
             if ~exist(loadName + ".mat",'file')
                 warning("No file called " + loadName + ".mat to load. Antenna array not loaded!");
                 return;
@@ -450,6 +481,8 @@ classdef sarTarget < handle
         end
         
         function verifyGPU(obj)
+            % Verifies if the GPU can be used 
+            
             if obj.isGPU
                 try
                     reset(gpuDevice);
@@ -462,13 +495,39 @@ classdef sarTarget < handle
         end
         
         function attachListener(obj)
+            % Attaches a listener to the object handle
+            
             addlistener(obj,{'isAmplitudeFactor','isTable','isPNG','isSTL','isRandomPoints','tableTarget','png','stl','rp','fmcw','ant','sar'},'PostSet',@sarTarget.propChange);
         end
     end
     
     methods(Static)
         function propChange(metaProp,eventData)
+            % Recomputes the target if the watched parameters are changed
+            
             getTarget(eventData.AffectedObject);
+        end
+        
+        function outstr = getEstTime(tocs,currentInd,totalInd)
+            % Estimates the time until completion
+            
+            avgtoc = mean(tocs(1:currentInd))*(totalInd - currentInd);
+            hrrem = floor(avgtoc/3600);
+            avgtoc = avgtoc - floor(avgtoc/3600)*3600;
+            minrem = floor(avgtoc/60);
+            avgtoc = avgtoc - floor(avgtoc/60)*60;
+            secrem = round(avgtoc);
+            
+            if hrrem < 10
+                hrrem = "0" + hrrem;
+            end
+            if minrem < 10
+                minrem = "0" + minrem;
+            end
+            if secrem < 10
+                secrem = "0" + secrem;
+            end
+            outstr = hrrem + ":" + minrem + ":" + secrem;
         end
     end
 end

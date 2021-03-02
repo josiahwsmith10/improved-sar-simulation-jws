@@ -23,7 +23,7 @@ classdef sarScenario < handle
         scanMethod
         sarSize
         
-        fig = struct('f',[],'h',[])
+        fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
         ant
     end
     methods
@@ -312,6 +312,9 @@ classdef sarScenario < handle
         end
         
         function isFail = verifyCylindrical(obj)
+            % Verify proper antenna and SAR scenario parameters for a
+            % cylindrical scan
+            
             isFail = false;
             if obj.numX ~= 1
                 warning("numX must be 1 for cylindrical scan!")
@@ -328,12 +331,16 @@ classdef sarScenario < handle
         end
         
         function attachListener(obj)
+            % Attaches the listener to the object handle
+            
             addlistener(obj,{'scanMethod','xStep_m','numX','yStep_m','numY','thetaMax_deg','numTheta','ant'},'PostSet',@sarScenario.propChange);
         end
     end
     
     methods(Static)
         function propChange(metaProp,eventData)
+            % Recomputes the SAR antenna positions if watched properties are changed
+            
             computeSarScenario(eventData.AffectedObject);
         end
     end

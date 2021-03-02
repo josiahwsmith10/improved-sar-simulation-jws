@@ -1,17 +1,14 @@
 %% Include Necessary Directories
-%-------------------------------------------------------------------------%
-addpath(genpath("./"));
+addpath(genpath("../"));
 
 %% Create the Objects
-%-------------------------------------------------------------------------%
 fmcw = fmcwChirpParameters();
-ant = antennaArray(fmcw);
+ant = sarAntennaArray(fmcw);
 sar = sarScenario(ant);
 target = sarTarget(fmcw,ant,sar);
 im = sarImage(fmcw,ant,sar,target);
 
 %% Set FMCW Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of an fmcwChirpParameters object are changed by the
 % user, the object automatically updates itself, namely the property 'k'
 % and other dependencies of the changed parameters.
@@ -26,11 +23,10 @@ fmcw.RampEndTime_s = 39.98*1e-6;
 fmcw.fC = 79*1e9;
 
 %% Set Antenna Array Properties
-%-------------------------------------------------------------------------%
 % When the parameters of an antennaArray object are changed by the user, 
 % the object automatically updates itself
 ant.isEPC = false;
-ant.z0_m = 0.25;
+ant.z0_m = 0;
 % Antenna array from xWR1x43
 ant.tableTx = [
     0   0   1.5 5   1
@@ -46,20 +42,16 @@ ant.tableRx = [
 ant.displayAntennaArray();
 
 %% Set SAR Scenario Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of a sarScenario object are changed by the user, the
 % object automatically updates itself
-sar.scanMethod = 'Cylindrical';
-sar.numY = 25;
+sar.scanMethod = 'Linear';
 sar.yStep_m = fmcw.lambda_m*2;
-sar.numTheta = 256;
-sar.thetaMax_deg = 360;
+sar.numY = 25;
 
 % Display the SAR Scenario
 sar.displaySarScenario();
 
 %% Set Target Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of a sarTarget object are changed by the user, the
 % object automatically updates itself
 target.isAmplitudeFactor = false;
@@ -68,26 +60,9 @@ target.tableTarget = [
     0   0   0.25    1
     0   0.1 0.25    1];
 
-target.png.fileName = 'circle.png';
-target.png.xStep_m = 1e-3;
-target.png.yStep_m = 1e-3;
-target.png.xOffset_m = -0.025;
-target.png.yOffset_m = 0.05;
-target.png.zOffset_m = 0;
-target.png.reflectivity = 1;
-target.png.downsampleFactor = 4;
-
-target.stl.fileName = 'maleTorso.stl';
-target.stl.zCrop_m = 0.25;
-target.stl.xOffset_m = 0;
-target.stl.yOffset_m = 0;
-target.stl.zOffset_m = 0;
-target.stl.reflectivity = 1;
-target.stl.downsampleFactor = 40;
-
 target.rp.numTargets = 16;
-target.rp.xMin_m = -0.1;
-target.rp.xMax_m = 0.1;
+target.rp.xMin_m = 0;
+target.rp.xMax_m = 0;
 target.rp.yMin_m = -0.1;
 target.rp.yMax_m = 0.1;
 target.rp.zMin_m = 0.25;
@@ -97,49 +72,41 @@ target.rp.ampMax = 1;
 
 % Which to use
 target.isTable = true;
-target.isPNG = false;
-target.isSTL = false;
 target.isRandomPoints = false;
 
+% Display the target
+target.displayTarget();
+
 %% Compute Beat Signal
-%-------------------------------------------------------------------------%
 target.isGPU = true;
 target.computeTarget();
 
 %% Set Image Reconstruction Parameters and Create sarImage Object
-%-------------------------------------------------------------------------%
 % When the parameters of a sarImage object are changed by the user, the
 % object automatically updates itself
-im.nFFTx = 1024;
 im.nFFTy = 512;
 im.nFFTz = 512;
-
-im.xMin_m = -0.2;
-im.xMax_m = 0.2;
 
 im.yMin_m = -0.2;
 im.yMax_m = 0.2;
 
-im.zMin_m = -0.2;
-im.zMax_m = 0.2;
+im.zMin_m = 0;
+im.zMax_m = 0.5;
 
-im.numX = 128;
 im.numY = 128;
 im.numZ = 128;
 
 im.isGPU = false;
-im.thetaUpsampleFactor = 4;
-im.method = "Uniform 2-D CSAR 3-D PFA";
+% im.zSlice_m = 0.25; % Use if reconstructing a 1-D image
+im.method = "Uniform 1-D SAR 2-D RMA";
 
 im.isMult2Mono = true;
 im.zRef_m = 0.25;
 
 %% Reconstruct the Image
-%-------------------------------------------------------------------------%
 im.computeImage();
 
 %% Display the Image with Different Parameters
-%-------------------------------------------------------------------------%
-im.dBMin = -25;
+im.dBMin = -30;
 im.fontSize = 12;
 im.displayImage();

@@ -1,26 +1,33 @@
 classdef sarTarget_app < handle
+    % sarTarget_app A sarTarget_app object holds the properties and methods 
+    % used in the FMCW MIMO-SAR scenario as specified by the user
+    
     properties
-        isGPU
-        isMIMO
+        isGPU = true                % Boolean whether or not to use the GPU for beat signal computation
+        isMIMO                      % Boolean whether or not to use the MIMO physical element locations instead of the equivalent phase center virtual element locations
         
-        isAmplitudeFactor
+        isAmplitudeFactor = false   % Boolean whether or not to include the amplitude factor (path loss) in the beat signal computation
         
-        isLong
-        numTargets
-        xyz_m
-        amp
-        R
+        isLong = false              % Boolean whether or not to use the long beat signal computation method
+        numTargets = 0              % Number of target voxels
+        xyz_m                       % Target x-y-z locations as a (numTargets)x3 array 
+        amp                         % Column vector of target reflectivities
+        R                           % Radial distances from antennas to target (MIMO or EPC)
         
-        png
-        stl
-        rp
+        png = struct('isLoaded',false,'fileNameLoaded',"") % Structure containing the parameters of the PNG target
+        stl = struct('isLoaded',false,'fileNameLoaded',"") % Structure containing the parameters of the STL target
+        rp                          % Structure containing the parameters of the random point targets
         
-        sarData
+        sarData                     % Computed beat signal
         
-        fig
+        fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
     end
+    
     methods
-        function obj = sarTarget_app(app)            
+        function obj = sarTarget_app(app)
+            % Verifies the GPU can be used, initializes the figures, then
+            % updates the target with the values in the app
+            
             obj = verifyGPU(obj,app);
             obj = initializeFigures(obj);
             obj = update(obj,app);
@@ -29,6 +36,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = update(obj,app)
+            % Update the target with the values in the app
+            
             app.BeatSignalComputedLamp.Color = "red";
             app.ImageReconstructionCompleteLamp.Color = "red";
             obj = getTarget(obj,app);
@@ -45,6 +54,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getTarget(obj,app)
+            % Gets the target using the values in the app
+            
             obj.isMIMO = verifyMIMO(obj,app);
             
             obj.isAmplitudeFactor = app.PathLossCheckBox.Value;
@@ -70,6 +81,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getTargetTable(obj,app)
+            % Gets the positions and amplitudes from the table of targets
+            
             if isempty(app.TargetTable.Data)
                 return;
             end
@@ -82,6 +95,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getPNGTarget(obj,app)
+            % Gets the positions and amplitudes from the PNG target
+            
             obj = getPNGParameters(obj,app);
             
             try
@@ -132,6 +147,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getPNGParameters(obj,app)
+            % Gets the parameters for the PNG target from the app
+            
             obj.png.fileName = app.PNGFileNameEditField.Value;
             obj.png.xStep_m = app.XPixelSizemEditField.Value;
             obj.png.yStep_m = app.YPixelSizemEditField.Value;
@@ -143,6 +160,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getSTLTarget(obj,app)
+            % Gets the positions and amplitudes from the STL target
+            
             if ~obj.stl.isLoaded
                 selection = uiconfirm(app.UIFigure,'Would you liked to load the STL file?','STL File Not Yet Loaded',...
                     'Icon','warning');
@@ -177,6 +196,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getSTLParameters(obj,app)
+            % Gets the parameters for the STL target from the app
+            
             obj.stl.fileName = app.STLFileNameEditField.Value;
             obj.stl.zCrop_m = app.ZCropmEditField.Value;
             obj.stl.xOffset_m = app.XOffsetmEditField_2.Value;
@@ -187,6 +208,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = loadSTL(obj,app)
+            % Loads the STL file and updates stl.isLoaded
+            
             app.LoadSTLLamp.Color = "yellow";
             drawnow
             obj = getSTLParameters(obj,app);
@@ -217,6 +240,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getRandomTarget(obj,app)
+            % Generates the random targets given the parameters
+            
             obj = getRandomParameters(obj,app);
             
             temp_x = obj.rp.xMin_m + (obj.rp.xMax_m - obj.rp.xMin_m)*rand(obj.rp.numTargets,1);
@@ -230,6 +255,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = getRandomParameters(obj,app)
+            % Gets the parameters for the ramdom targets from the app
+            
             obj.rp.numTargets = app.NumTargetsEditField_3.Value;
             obj.rp.xMin_m = app.XMinmEditField.Value;
             obj.rp.xMax_m = app.XMaxmEditField.Value;
@@ -242,6 +269,9 @@ classdef sarTarget_app < handle
         end
         
         function obj = computeTarget(obj,app)
+            % Computes the beat signal. First attempts the fast method then
+            % the slow method, if the fast method fails
+            
             if obj.isGPU
                 reset(gpuDevice)
             end
@@ -315,13 +345,13 @@ classdef sarTarget_app < handle
                     % Update the progress dialog
                     tocs(indK) = toc;
                     d.Value = indK/app.fmcw.ADCSamples;
-                    d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,indK,app.fmcw.ADCSamples);
+                    d.Message = "Estimated Time Remaining: " + getEstTime(tocs,indK,app.fmcw.ADCSamples);
                 end
             catch
                 d.Title = "Generating Echo Signal Using Slow Method";
                 % Always works method
                 tocs = single(zeros(1,app.fmcw.ADCSamples*obj.numTargets));
-                count = 0;                
+                count = 0;
                 for indSAR = 1:size(app.sar.rx.xyz_m,1)
                     tic
                     if obj.isMIMO
@@ -369,7 +399,7 @@ classdef sarTarget_app < handle
                         % Update the progress dialog
                         tocs(count) = toc;
                         d.Value = count/(app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
-                        d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,count,app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
+                        d.Message = "Estimated Time Remaining: " + getEstTime(tocs,count,app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
                     end
                 end
             end
@@ -380,28 +410,9 @@ classdef sarTarget_app < handle
             obj.sarData = reshape(obj.sarData,[app.sar.sarSize,app.fmcw.ADCSamples]);
         end
         
-        function outstr = getEstTime(obj,tocs,currentInd,totalInd)
-            avgtoc = mean(tocs(1:currentInd))*(totalInd - currentInd);
-            hrrem = floor(avgtoc/3600);
-            avgtoc = avgtoc - floor(avgtoc/3600)*3600;
-            minrem = floor(avgtoc/60);
-            avgtoc = avgtoc - floor(avgtoc/60)*60;
-            secrem = round(avgtoc);
-            
-            if hrrem < 10
-                hrrem = "0" + hrrem;
-            end
-            if minrem < 10
-                minrem = "0" + minrem;
-            end
-            if secrem < 10
-                secrem = "0" + secrem;
-            end
-            outstr = hrrem + ":" + minrem + ":" + secrem;
-        end
-        
-        % Plot/figure functions
         function obj = initializeFigures(obj)
+            % Initialize the figures
+            
             closeFigures(obj);
             
             % AntAxes
@@ -410,13 +421,17 @@ classdef sarTarget_app < handle
         end
         
         function closeFigures(obj)
+            % Attempt to close the figures
+            
             try
                 close(obj.fig.f)
             catch
             end
-        end        
+        end
         
         function displayTarget(obj,app)
+            % Display the target with the MIMO-SAR scenario
+            
             if isempty(obj.xyz_m)
                 return;
             end
@@ -454,6 +469,8 @@ classdef sarTarget_app < handle
         end
         
         function displayVirtualTarget(obj,app)
+            % Display the target with the virtual array SAR scenario
+            
             h = obj.fig.h;
             hold(h,'off')
             temp = app.sar.vx.xyz_m;
@@ -484,9 +501,11 @@ classdef sarTarget_app < handle
             daspect(h,[1 1 1])
         end
         
-        % Save/load functions
         function saveTarget(obj,app)
-            if exist(app.TargetSaveNameEditField.Value + ".mat",'file')
+            % Save the sarTarget_app object
+            
+            savePathFull = "./saved/targets/" + app.TargetSaveNameEditField.Value + ".mat";
+            if exist(savePathFull,'file')
                 selection = uiconfirm(app.UIFigure,'Are you sure you want to overwrite?','Confirm Overwrite',...
                     'Icon','warning');
                 if string(selection) == "Cancel"
@@ -497,19 +516,20 @@ classdef sarTarget_app < handle
             
             savedtarget = obj;
             savedtarget.fig = 0;
-            savePathFull = "./saved/targets/" + app.TargetSaveNameEditField.Value + ".mat";
             save(savePathFull,"savedtarget");
         end
         
         function obj = loadTarget(obj,app)
-            if ~exist(app.TargetLoadNameEditField.Value + ".mat",'file')
+            % Load a sarTarget_app object from a file
+            
+            loadPathFull = "./saved/targets/" + app.TargetLoadNameEditField.Value + ".mat";
+            if ~exist(loadPathFull,'file')
                 uiconfirm(app.UIFigure,"No file called " + app.TargetLoadNameEditField.Value + ".mat to load",'Cannot Load',...
                     "Options",{'OK'},'Icon','warning');
                 warning("Target not loaded!");
                 return;
             end
             
-            loadPathFull = "./saved/targets/" + app.TargetLoadNameEditField.Value + ".mat";
             load(loadPathFull,"savedtarget");
             
             savedtarget.fig = obj.fig;
@@ -530,6 +550,8 @@ classdef sarTarget_app < handle
         end
         
         function obj = verifyGPU(obj,app)
+            % Verifies if the GPU can be used 
+            
             if app.UseGPUCheckBox.Value
                 try
                     reset(gpuDevice);
@@ -547,6 +569,8 @@ classdef sarTarget_app < handle
         end
         
         function tf = verifyMIMO(obj,app)
+            % Verifies if the user has specified MIMO or EPC in the app
+            
             if app.MIMOSwitch.Value == "Use MIMO Array"
                 tf = true;
             elseif app.MIMOSwitch.Value == "Use EPC Virtual Elements"
@@ -556,5 +580,26 @@ classdef sarTarget_app < handle
     end
     
     methods(Static)
+        function outstr = getEstTime(tocs,currentInd,totalInd)
+            % Estimates the time until completion
+            
+            avgtoc = mean(tocs(1:currentInd))*(totalInd - currentInd);
+            hrrem = floor(avgtoc/3600);
+            avgtoc = avgtoc - floor(avgtoc/3600)*3600;
+            minrem = floor(avgtoc/60);
+            avgtoc = avgtoc - floor(avgtoc/60)*60;
+            secrem = round(avgtoc);
+            
+            if hrrem < 10
+                hrrem = "0" + hrrem;
+            end
+            if minrem < 10
+                minrem = "0" + minrem;
+            end
+            if secrem < 10
+                secrem = "0" + secrem;
+            end
+            outstr = hrrem + ":" + minrem + ":" + secrem;
+        end
     end
 end

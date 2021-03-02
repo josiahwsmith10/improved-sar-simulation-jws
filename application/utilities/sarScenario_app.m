@@ -23,7 +23,7 @@ classdef sarScenario_app < handle
         method
         sarSize
         
-        fig
+        fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
         
         isMIMO
     end

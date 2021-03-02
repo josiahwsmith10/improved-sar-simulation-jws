@@ -1,14 +1,13 @@
 %% Include Necessary Directories
-%-------------------------------------------------------------------------%
 addpath(genpath("../"));
 
 %% Create the Objects
-%-------------------------------------------------------------------------%
 fmcw = fmcwChirpParameters();
-ant = antennaArray(fmcw);
+ant = sarAntennaArray(fmcw);
+
+doc sarAntennaArray
 
 %% Set FMCW Parameters
-%-------------------------------------------------------------------------%
 % When the parameters of an fmcwChirpParameters object are changed by the
 % user, the object automatically updates itself, namely the property 'k'
 % and other dependencies of the changed parameters.
@@ -23,7 +22,6 @@ fmcw.RampEndTime_s = 39.98*1e-6;
 fmcw.fC = 79*1e9;
 
 %% Set Antenna Array Properties
-%-------------------------------------------------------------------------%
 % When the parameters of an antennaArray object are changed by the user, 
 % the object automatically updates itself
 ant.isEPC = false;
@@ -43,9 +41,7 @@ ant.tableRx = [
 ant.displayAntennaArray();
 
 %% Load in Saved FMCW Parameters
-%-------------------------------------------------------------------------%
 ant.loadAntennaArray("AWR1243");
 
 %% Save FMCW Parameters
-%-------------------------------------------------------------------------%
 ant.saveAntennaArray("AWR1243");

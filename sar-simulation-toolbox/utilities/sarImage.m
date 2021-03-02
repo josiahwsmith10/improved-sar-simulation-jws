@@ -1,57 +1,70 @@
 classdef sarImage < handle
+    % sarImage a sarImage object holds the properties and methods used for
+    % reconstructing the image from the simulated SAR scenario
+    
     properties(SetObservable)
-        nFFTx = 512
-        nFFTy = 512
-        nFFTz = 512
+        nFFTx = 512                 % Number of FFT points along the x-dimension, when using FFT-based reconstruction algorithms
+        nFFTy = 512                 % Number of FFT points along the y-dimension, when using FFT-based reconstruction algorithms
+        nFFTz = 512                 % Number of FFT points along the z-dimension, when using FFT-based reconstruction algorithms
         
-        numX = 128
-        numY = 128
-        numZ = 128
+        numX = 128                  % Number of voxels in the reconstructed image along the x-dimension
+        numY = 128                  % Number of voxels in the reconstructed image along the y-dimension
+        numZ = 128                  % Number of voxels in the reconstructed image along the z-dimension
         
-        x_m
-        y_m
-        z_m
+        x_m                         % Reconstructed image x axis
+        y_m                         % Reconstructed image y axis
+        z_m                         % Reconstructed image z axis
         
-        xMin_m = -0.2
-        xMax_m = 0.2
+        xMin_m = -0.2               % Minimum value of reconstructed image along x-dimension
+        xMax_m = 0.2                % Maximum value of reconstructed image along x-dimension
         
-        yMin_m = -0.2
-        yMax_m = 0.2
+        yMin_m = -0.2               % Minimum value of reconstructed image along y-dimension
+        yMax_m = 0.2                % Maximum value of reconstructed image along y-dimension
         
-        zMin_m = 0
-        zMax_m = 0.5
+        zMin_m = 0                  % Minimum value of reconstructed image along z-dimension
+        zMax_m = 0.5                % Maximum value of reconstructed image along z-dimension
         
-        method = "-"
+        method = "-"                % Reconstruction algorithm to use
         
-        imXYZ
+        imXYZ                       % Reconstructed image
         
-        fig = struct('f',[],'h',[])
-        dBMin = -25
-        fontSize = 12
-        vSliceIndex
+        fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
+        dBMin = -25                 % Minimum value displayed, in decibells
+        fontSize = 12               % Font size of displayed image
+        vSliceIndex                 % Slices of the 3-D image along the z-dimension to use (default: use all)
         
-        reconstructor = struct("isFail",false)
-        isGPU
-        isMult2Mono = false
-        zRef_m = 0.25
-        zSlice_m
-        thetaUpsampleFactor = 1
+        reconstructor = struct("isFail",false) % Reconstructor object: depends on which reconstruction algorithm is being used 
+        isGPU                       % Boolean whether or not to use the GPU for image reconstruction (results vary depending on imaging scenario and parameters)
+        isMult2Mono = false         % Boolean whether or not to use the multistatic-to-monostatic approximation
+        zRef_m = 0.25               % z location of reference plane for multistatic-to-monostatic approximation
+        zSlice_m                    % z slice of interest when reconstructing a 2-D x-y image, in meters
+        thetaUpsampleFactor = 1     % Upsample factor on the theta dimension of the SAR data operated in circular or cylindrical mode
         
-        fmcw
-        ant
-        sar
-        target
+        fmcw                        % An fmcwChirpParameters object
+        ant                         % A sarAntennaArray object
+        sar                         % A sarScenario object
+        target                      % A sarTarget object
     end
     methods
         function obj = sarImage(fmcw,ant,sar,target)
+            % Attaches the listener to the sarTarget object so
+            % observable properties can be watched for changes and sets the
+            % necessary parameters from the other SAR and FMCW type
+            % objects. Then verifies whether the GPU can be used, if
+            % necessary
+            
             attachListener(obj);
             obj.fmcw = fmcw;
             obj.ant = ant;
             obj.sar = sar;
             obj.target = target;
+            
+            verifyGPU(obj);
         end
         
         function update(obj)
+            % Update the imaging parameters
+            
             getImagingParameters(obj);
             if obj.method == "-"
                 obj.reconstructor.isFail = true;
@@ -59,6 +72,8 @@ classdef sarImage < handle
         end
         
         function computeImage(obj)
+            % Attempt to reconstruct the image
+            
             if isempty(obj.target.sarData)
                 warning("Must compute beat signal before image reconstruction!")
                 return
@@ -77,6 +92,10 @@ classdef sarImage < handle
         end
         
         function getImagingParameters(obj)
+            % Get the imaging axes and construct the image reconstruction 
+            % algorithm object for use later. During the construction
+            % process, the imaging parameters are verified
+            
             generateAxes(obj);
             
             switch obj.method
@@ -113,21 +132,25 @@ classdef sarImage < handle
         end
         
         function generateAxes(obj)
+            % Generate the imaging axes
+            
             obj.x_m = single(linspace(obj.xMin_m,obj.xMax_m-(obj.xMax_m-obj.xMin_m)/obj.numX,obj.numX));
             obj.y_m = single(linspace(obj.yMin_m,obj.yMax_m-(obj.yMax_m-obj.yMin_m)/obj.numY,obj.numY));
             obj.z_m = single(linspace(obj.zMin_m,obj.zMax_m-(obj.zMax_m-obj.zMin_m)/obj.numZ,obj.numZ));
         end
         
-        % Plot/figure functions
         function initializeFigures(obj)
+            % Initialize the figures
+            
             closeFigures(obj);
             
-            % AntAxes
             obj.fig.f = figure;
             obj.fig.h = handle(axes);
         end
         
         function closeFigures(obj)
+            % Attempt to close the figures
+            
             try
                 close(obj.fig.f)
             catch
@@ -135,6 +158,8 @@ classdef sarImage < handle
         end
         
         function displayImage(obj)
+            % Displays the reconstructed image
+            
             if isempty(obj.fig.f)
                 initializeFigures(obj);
             end
@@ -144,6 +169,9 @@ classdef sarImage < handle
         end
         
         function openInVolumeViewer(obj)
+            % If the reconstructed image is 3-D, open in MATLAB
+            % volumeViewer
+            
             if ismatrix(obj.imXYZ)
                 warning("Cannot open 2D image in volume viewer!");
             end
@@ -156,12 +184,30 @@ classdef sarImage < handle
         end
         
         function attachListener(obj)
+            % Attaches the listener to the object handle
+            
             addlistener(obj,{'method','fmcw','ant','sar','target'},'PostSet',@sarImage.propChange);
+        end
+        
+        function verifyGPU(obj)
+            % Verifies if the GPU can be used 
+            
+            if obj.isGPU
+                try
+                    reset(gpuDevice);
+                catch
+                    obj.isGPU = false;
+                    warning("Unable to locate Nvidia GPU");
+                    return;
+                end
+            end
         end
     end
     
     methods(Static)
         function propChange(metaProp,eventData)
+            % Updates the image parameters if watched properties are changed
+            
             update(eventData.AffectedObject);
         end
     end

@@ -1,32 +1,60 @@
-classdef antennaArray < handle
-    properties(SetObservable)
-        tx = struct('xy_m',[],'xyz_m',[])
-        rx = struct('xy_m',[],'xyz_m',[])
-        vx = struct('xy_m','xyz_m')
-        z0_m = 0
-        fmcw
+classdef sarAntennaArray < handle
+    % sarAntennaArray An sarAntennaArray object holds the properties and methods
+    % of the MIMO antenna array as specified by the user
+    
+    properties
+        tx = struct('xy_m',[],'xyz_m',[])   % Structure containing the parameters (location, etc.) of the transmitter antennas
+        rx = struct('xy_m',[],'xyz_m',[])   % Structure containing the parameters (location, etc.) of the receiver antennas
+        vx = struct('xy_m','xyz_m')         % Structure containing the parameters (location, etc.) of the virtual element antennas
         
+        fig = struct('f',[],'h',[])         % Structure containing the figure and handle used for showing the antenna array
+    end
+    
+    properties(SetObservable)
+        z0_m = 0                            % Location of the antenna array in the z-plane
+        fmcw                                % An fmcwChirpParameters object
+        
+        % tableTx - Array of transmitter antenna locations and states in the
+        % following form:
+        %   x (m)   |   x (lambda)  |   y (m)   |   y (lambda)  |   state
+        %   A       |   B           |   C       |   D           |   1
+        % Where A, B, C, and D are doubles and the x-location of the 
+        % transmit element is computed by x = A + B*lambda, using lambda as
+        % the lambda_m property of the fmcwChirpParameters object fmcw
         tableTx = [
             0   0   1.5 5   1
             0.5 0   2.5 5   0
             0   0   3.5 5   1]
+        
+        % tableRx - Array of receiver antenna locations and states in the
+        % following form:
+        %   x (m)   |   x (lambda)  |   y (m)   |   y (lambda)  |   state
+        %   A       |   B           |   C       |   D           |   1
+        % Where A, B, C, and D are doubles and the x-location of the 
+        % receive element is computed by x = A + B*lambda, using lambda as
+        % the lambda_m property of the fmcwChirpParameters object fmcw
         tableRx = [
             0   0   0   0   1
             0   0   0.5 0   1
             0   0   1   0   1
             0   0   1.5 0   1]
         
-        fig = struct('f',[],'h',[])
-        
-        isEPC = false
+        isEPC = false                       % Boolean whether or not to use the equivalent phase center virtual element locations instead of the MIMO physical element locations
     end
+    
     methods
-        function obj = antennaArray(fmcw)
+        function obj = sarAntennaArray(fmcw)
+            % Attaches the listener to the sarAntennaArray object so
+            % observable properties can be watched for changes and sets the
+            % fmcw parameter to the fmcwChirpParameters object input
+            
             attachListener(obj);
             obj.fmcw = fmcw;
         end
         
         function obj = computeAntennaArray(obj)
+            % Computes the physical and virtual antenna locations 
+            
             obj.tx.xy_m = single(obj.tableTx);
             obj.rx.xy_m = single(obj.tableRx);
             
@@ -77,8 +105,9 @@ classdef antennaArray < handle
             obj.vx.xyz_m = obj.vx.xyz_m - temp;
         end
         
-        % Plot/figure functions
         function initializeFigures(obj)
+            % Initializes the figures
+            
             closeFigures(obj)
             set(0,'DefaultFigureWindowStyle','docked')
             
@@ -87,6 +116,8 @@ classdef antennaArray < handle
         end
         
         function closeFigures(obj)
+            % Attempts to close the figures
+            
             try
                 close(obj.fig.f)
             catch
@@ -94,6 +125,8 @@ classdef antennaArray < handle
         end
         
         function displayAntennaArray(obj)
+            % Displays the antenna arrays in the figure
+            
             if isempty(obj.fig.f)
                 initializeFigures(obj);
             end
@@ -106,6 +139,8 @@ classdef antennaArray < handle
         end
         
         function displayAntennaArrayMIMO(obj)
+            % Plots the MIMO array
+            
             if ~obj.tx.numTx || ~obj.rx.numRx
                 return;
             end
@@ -124,6 +159,8 @@ classdef antennaArray < handle
         end
         
         function displayAntennaArrayEPC(obj)
+            % Plots the equivalent-phase-center (EPC) virtual array
+            
             if ~obj.tx.numTx || ~obj.rx.numRx
                 return;
             end
@@ -140,11 +177,10 @@ classdef antennaArray < handle
             title(h,"Virtual Array (x-y)")
         end
         
-        
-        % Save/load functions
         function saveAntennaArray(obj,saveName)
-            savePathFull = "./saved/antennaArrays/" + saveName + ".mat";
-            if exist(savePathFull,'file')
+            % Saves the sarAntennaArray object
+            
+            if exist(saveName + ".mat",'file')
                 str = input('Are you sure you want to overwrite? Y/N: ','s');
                 if str ~= 'Y'
                     warning("Antenna array not saved!");
@@ -153,18 +189,19 @@ classdef antennaArray < handle
             end
             
             savedant = obj;
-            save(savePathFull,"savedant");
-            disp("Anteanna array saved to: " + savePathFull);
+            save(saveName,"savedant");
+            disp("Anteanna array saved to: " + saveName);
         end
         
         function loadAntennaArray(obj,loadName)
+            % Loads the sarAntennaArray object
+            
             if ~exist(loadName + ".mat",'file')
                 warning("No file called " + loadName + ".mat to load. Antenna array not loaded!");
                 return;
             end
             
-            loadPathFull = "./saved/antennaArrays/" + loadName + ".mat";
-            load(loadPathFull,"savedant");
+            load(loadName,"savedant");
             
             obj.isEPC = savedant.isEPC;
             obj.z0_m = savedant.z0_m;
@@ -173,12 +210,16 @@ classdef antennaArray < handle
         end
         
         function attachListener(obj)
-            addlistener(obj,{'isEPC','z0_m','tableTx','tableRx','fmcw'},'PostSet',@antennaArray.propChange);
+            % Attaches the listener to the object handle
+            
+            addlistener(obj,{'isEPC','z0_m','tableTx','tableRx','fmcw'},'PostSet',@sarAntennaArray.propChange);
         end
     end
     
     methods(Static)
         function propChange(metaProp,eventData)
+            % Recomputes the array positions if the watched properties change
+            
             computeAntennaArray(eventData.AffectedObject);
         end
     end

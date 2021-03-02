@@ -1,41 +1,40 @@
 classdef sarImage_app < handle
+    % sarImage_app a sarImage_app object holds the properties and methods used for
+    % reconstructing the image from the simulated SAR scenario
+    
     properties
-        nFFTx
-        nFFTy
-        nFFTz
+        nFFTx = 512                 % Number of FFT points along the x-dimension, when using FFT-based reconstruction algorithms
+        nFFTy = 512                 % Number of FFT points along the y-dimension, when using FFT-based reconstruction algorithms
+        nFFTz = 512                 % Number of FFT points along the z-dimension, when using FFT-based reconstruction algorithms
         
-        numX
-        numY
-        numZ
+        numX = 128                  % Number of voxels in the reconstructed image along the x-dimension
+        numY = 128                  % Number of voxels in the reconstructed image along the y-dimension
+        numZ = 128                  % Number of voxels in the reconstructed image along the z-dimension
         
-        resizeX
-        resizeY
-        resizeZ
+        x_m                         % Reconstructed image x axis
+        y_m                         % Reconstructed image y axis
+        z_m                         % Reconstructed image z axis
         
-        x_m
-        y_m
-        z_m
+        xMin_m = -0.2               % Minimum value of reconstructed image along x-dimension
+        xMax_m = 0.2                % Maximum value of reconstructed image along x-dimension
         
-        xMin_m
-        xMax_m
+        yMin_m = -0.2               % Minimum value of reconstructed image along y-dimension
+        yMax_m = 0.2                % Maximum value of reconstructed image along y-dimension
         
-        yMin_m
-        yMax_m
+        zMin_m = 0                  % Minimum value of reconstructed image along z-dimension
+        zMax_m = 0.5                % Maximum value of reconstructed image along z-dimension
         
-        zMin_m
-        zMax_m
+        method = "-"                % Reconstruction algorithm to use
         
-        method
+        imXYZ                       % Reconstructed image
         
-        imXYZ
+        fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
+        dBMin = -25                 % Minimum value displayed, in decibells
+        fontSize = 12               % Font size of displayed image
+        vSliceIndex                 % Slices of the 3-D image along the z-dimension to use (default: use all)
         
-        fig
-        dBMin
-        fontSize
-        vSliceIndex
-        
-        reconstructor
-        isGPU
+        reconstructor               % Reconstructor object: depends on which reconstruction algorithm is being used 
+        isGPU                       % Boolean whether or not to use the GPU for image reconstruction (results vary depending on imaging scenario and parameters)
     end
     methods
         function obj = sarImage_app(app)
@@ -43,6 +42,9 @@ classdef sarImage_app < handle
         end
         
         function obj = update(obj,app)
+            % Update the imaging parameters from the app and verify the
+            % parameters
+            
             obj = getImagingParameters(obj,app);
             if app.ReconstructionAlgorithmDropDown.Value ~= "-"
                 obj.reconstructor = obj.reconstructor.update(app,obj);
@@ -56,6 +58,8 @@ classdef sarImage_app < handle
         end
         
         function obj = computeImage(obj,app)
+            % Attempt to reconstruct the image
+            
             if isempty(app.target.sarData)
                 uiconfirm(app.UIFigure,"Must compute beat signal before image reconstruction!",'Beat Signal Error!',...
                     "Options",{'OK'},'Icon','warning');
@@ -77,6 +81,10 @@ classdef sarImage_app < handle
         end
         
         function obj = getImagingParameters(obj,app)
+            % Get the imaging parameters from the app, get the imaging
+            % axes, and construct the image reconstruction algorithm object
+            % for use later
+            
             obj.method = app.ReconstructionAlgorithmDropDown.Value;
             
             obj.dBMin = app.MindBEditField.Value;
@@ -137,21 +145,25 @@ classdef sarImage_app < handle
         end
         
         function obj = generateAxes(obj)
+            % Generate the imaging axes
+            
             obj.x_m = single(linspace(obj.xMin_m,obj.xMax_m-(obj.xMax_m-obj.xMin_m)/obj.numX,obj.numX));
             obj.y_m = single(linspace(obj.yMin_m,obj.yMax_m-(obj.yMax_m-obj.yMin_m)/obj.numY,obj.numY));
             obj.z_m = single(linspace(obj.zMin_m,obj.zMax_m-(obj.zMax_m-obj.zMin_m)/obj.numZ,obj.numZ));
         end
         
-        % Plot/figure functions
         function obj = initializeFigures(obj)
+            % Initialize the figures
+            
             closeFigures(obj);
             
-            % AntAxes
             obj.fig.f = figure;
             obj.fig.h = handle(axes);
         end
         
         function closeFigures(obj)
+            % Attempt to close the figures
+            
             try
                 close(obj.fig.f)
             catch
@@ -159,6 +171,8 @@ classdef sarImage_app < handle
         end
         
         function displayImage(obj,app)
+            % Displays the reconstructed image
+            
             obj.dBMin = app.MindBEditField.Value;
             obj.fontSize = app.FontSizeEditField.Value;
             
@@ -167,6 +181,9 @@ classdef sarImage_app < handle
         end
         
         function openInVolumeViewer(obj)
+            % If the reconstructed image is 3-D, open in MATLAB
+            % volumeViewer
+            
             if ismatrix(obj.imXYZ)
                 warning("Cannot open 2D image in volume viewer!");
             end
@@ -179,6 +196,8 @@ classdef sarImage_app < handle
         end
         
         function tf = verifyMIMO(obj,app)
+            % Verifies if the user has specified MIMO or EPC in the app
+            
             if app.MIMOSwitch.Value == "Use MIMO Array"
                 tf = true;
             elseif app.MIMOSwitch.Value == "Use EPC Virtual Elements"
