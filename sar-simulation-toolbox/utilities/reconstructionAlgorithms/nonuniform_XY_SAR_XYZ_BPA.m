@@ -1,32 +1,42 @@
 classdef nonuniform_XY_SAR_XYZ_BPA < handle
+    % nonuniform_XY_SAR_XYZ_BPA is a reconstructor class that performs a
+    % 3-D Backprojection Algorithm image reconstruction. The synthetic
+    % aperture must span an x-y plane and can be nonuniformly spaced or use
+    % a MIMO array, even overlapping. The target can be a 1-D, 2-D, or 3-D
+    % target in x-y-z space
+    
     properties
-        sarData
+        sarData             % Computed beat signal
         
-        tx_xyz_m
-        rx_xyz_m
-        vx_xyz_m
-        target_xyz_m
-        sizeTarget
+        tx_xyz_m            % x-y-z coordinates of the transmitter antennas in the synthetic aperture
+        rx_xyz_m            % x-y-z coordinates of the receiver antennas in the synthetic aperture
+        vx_xyz_m            % x-y-z coordinates of the virtual elements in the synthetic aperture
+        target_xyz_m        % x-y-z coordinates of the voxels in the target domain, as specified by the user
+        sizeTarget          % Dimensions of the desired target, as specified by the user
         
-        imXYZ
+        imXYZ               % Reconstructed image
         
-        isGPU
-        isAmplitudeFactor
-        isFail = false
+        isGPU               % Boolean whether or not to use the GPU for image reconstruction
+        isAmplitudeFactor   % Boolean whether or not to include the amplitude factor in the image reconstruction process
+        isFail = false      % Boolean whether or not the reconstruction has failed
         
-        k_vec
+        k_vec               % Instantaneous wavenumber vector
         
-        estTime
+        estTime             % Structure for holding the estimated time until completion parameters
         
-        fmcw
-        ant
-        sar
-        target
-        im
+        fmcw                % fmcwChirpParameters object
+        ant                 % sarAntennaArray object
+        sar                 % sarScenario object
+        target              % sarTarget object
+        im                  % sarImage object
     end
     
     methods
         function obj = nonuniform_XY_SAR_XYZ_BPA(im)
+            % Set the properties corresponding to the object handles for
+            % the imaging scenario and get the parameters from those object
+            % handles
+            
             obj.fmcw = im.fmcw;
             obj.ant = im.ant;
             obj.sar = im.sar;
@@ -39,11 +49,16 @@ classdef nonuniform_XY_SAR_XYZ_BPA < handle
         end
         
         function update(obj)
+            % Update the reconstruction algorithm by getting the parameters
+            % from the object handles and verifying the paramters
+            
             getParameters(obj);
             verifyReconstruction(obj);
         end
         
         function getParameters(obj)
+            % Get the parameters from the object handles
+            
             obj.tx_xyz_m = obj.sar.tx.xyz_m;
             obj.rx_xyz_m = obj.sar.rx.xyz_m;
             obj.vx_xyz_m = obj.sar.vx.xyz_m;
@@ -62,6 +77,9 @@ classdef nonuniform_XY_SAR_XYZ_BPA < handle
         end
         
         function verifyReconstruction(obj)
+            % Verify that the reconstruction can continue. The scan must be
+            % a rectilinear scan
+            
             obj.isFail = false;
             
             if obj.sar.scanMethod ~= "Rectilinear"
@@ -72,6 +90,9 @@ classdef nonuniform_XY_SAR_XYZ_BPA < handle
         end
         
         function imXYZ_out = computeReconstruction(obj)
+            % Update the reconstruction algorithm and attempt the
+            % reconstruction
+            
             update(obj);
             
             if ~obj.isFail
@@ -82,7 +103,9 @@ classdef nonuniform_XY_SAR_XYZ_BPA < handle
             end
         end
         
-        function reconstruct(obj)            
+        function reconstruct(obj)
+            % Reconstruct the image using the 2-D Backprojection Algorithm
+            
             if obj.isGPU
                 reset(gpuDevice);
             end
@@ -96,7 +119,7 @@ classdef nonuniform_XY_SAR_XYZ_BPA < handle
                 fastBPA(obj,k);
             catch
                 mediumBPA(obj,k);
-            end            
+            end
             
             try
                 obj.imXYZ = reshape(obj.imXYZ,obj.sizeTarget);
@@ -105,105 +128,10 @@ classdef nonuniform_XY_SAR_XYZ_BPA < handle
             end
         end
         
-        function fastBPA(obj,k)
-            obj.imXYZ = single(zeros(1,size(obj.target_xyz_m,1)));
-            tocs = single(zeros(1,length(k)));
-            for indK = 1:length(k)
-                tic            
-                
-                if ~obj.ant.isEPC
-                    Rt = pdist2(obj.tx_xyz_m,obj.target_xyz_m);
-                    Rr = pdist2(obj.rx_xyz_m,obj.target_xyz_m);
-                    amplitudeFactor = Rt .* Rr;
-                    R_T_plus_R_R = Rt + Rr;
-                else
-                    R = pdist2(obj.vx_xyz_m,obj.target_xyz_m);
-                    R_T_plus_R_R = 2*R;
-                    amplitudeFactor = R.^2;
-                end
-                
-                if obj.isGPU
-                    R_T_plus_R_R = gpuArray(R_T_plus_R_R);
-                end
-                
-                bpaKernel = gather(exp(-1j*k(indK)*R_T_plus_R_R));
-                if obj.isAmplitudeFactor
-                    bpaKernel = bpaKernel .* amplitudeFactor;
-                end
-                obj.imXYZ = obj.imXYZ + sum(obj.sarData(:,:,indK) .* bpaKernel,1);
-                % Update the progress dialog
-                tocs(indK) = toc;
-                disp("Iteration " + indK + "/" + length(k) + ". Estimated Time Remaining: " + getEstTime(obj,tocs,indK,length(k)));
-            end
-        end
-        
-        function mediumBPA(obj,k)
-            obj.imXYZ = single(zeros(1,size(obj.target_xyz_m,1)));
-            tocs = single(zeros(1,2^14));
-            count = 0;
-            for indTarget = 1:size(obj.target_xyz_m,1)
-                for indK = 1:length(k)
-                    tic
-                    count = count + 1;
-                    
-                    if ~obj.ant.isEPC
-                        Rt = pdist2(obj.tx_xyz_m,obj.target_xyz_m(indTarget,:));
-                        Rr = pdist2(obj.rx_xyz_m,obj.target_xyz_m(indTarget,:));
-                        amplitudeFactor = Rt .* Rr;
-                        R_T_plus_R_R = Rt + Rr;
-                    else
-                        R = pdist2(obj.vx_xyz_m,obj.target_xyz_m(indTarget,:));
-                        R_T_plus_R_R = 2*R;
-                        amplitudeFactor = R.^2;
-                    end
-                    
-                    if obj.isGPU
-                        R_T_plus_R_R = gpuArray(R_T_plus_R_R);
-                    end
-                    
-                    bpaKernel = gather(exp(-1j*k(indK)*R_T_plus_R_R));
-                    if obj.isAmplitudeFactor
-                        bpaKernel = bpaKernel .* amplitudeFactor;
-                    end
-                    obj.imXYZ(indTarget) = obj.imXYZ(indTarget) + sum(obj.sarData(:,:,indK) .* bpaKernel,1);
-                    % Update the progress dialog
-                    tocs(mod(count,length(tocs))+1) = toc;
-                    disp("Iteration " + count + "/" + length(k)*size(obj.target_xyz_m,1) + ". Estimated Time Remaining: " + getEstTime(obj,tocs,indK,length(k)*size(obj.target_xyz_m,1)));
-                end
-            end
-        end
-        
         function displayImage(obj)
+            % Display the x-y-z reconstructed image
+            
             displayImage3D(obj.im);
-        end
-        
-        function outstr = getEstTime(obj,tocs,currentInd,totalInd)
-            avgtoc = mean(tocs(tocs~=0))*(totalInd - currentInd);
-            
-            if avgtoc > obj.estTime.old && obj.estTime.count < 100
-                obj.estTime.count = obj.estTime.count + 1;
-                avgtoc = obj.estTime.old;
-            else
-                obj.estTime.count = 0;
-                obj.estTime.old = avgtoc;
-            end
-            
-            hrrem = floor(avgtoc/3600);
-            avgtoc = avgtoc - floor(avgtoc/3600)*3600;
-            minrem = floor(avgtoc/60);
-            avgtoc = avgtoc - floor(avgtoc/60)*60;
-            secrem = round(avgtoc);
-            
-            if hrrem < 10
-                hrrem = "0" + hrrem;
-            end
-            if minrem < 10
-                minrem = "0" + minrem;
-            end
-            if secrem < 10
-                secrem = "0" + secrem;
-            end
-            outstr = hrrem + ":" + minrem + ":" + secrem;
         end
     end
 end

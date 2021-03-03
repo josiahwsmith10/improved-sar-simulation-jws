@@ -80,7 +80,7 @@ classdef fmcwChirpParameters < handle
                 return;
             end
             
-            load(saveName,"savedfmcw");
+            load(loadName,"savedfmcw");
             
             getChirpParameters(obj,savedfmcw);
             computeChirpParameters(obj);

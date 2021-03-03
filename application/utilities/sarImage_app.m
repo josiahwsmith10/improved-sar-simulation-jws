@@ -1,5 +1,5 @@
 classdef sarImage_app < handle
-    % sarImage_app a sarImage_app object holds the properties and methods used for
+    % sarImage_app object holds the properties and methods used for
     % reconstructing the image from the simulated SAR scenario
     
     properties

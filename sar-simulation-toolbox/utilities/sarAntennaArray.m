@@ -1,8 +1,9 @@
 classdef sarAntennaArray < handle
-    % sarAntennaArray An sarAntennaArray object holds the properties and methods
+    % sarAntennaArray object holds the properties and methods
     % of the MIMO antenna array as specified by the user
     
     properties
+        
         tx = struct('xy_m',[],'xyz_m',[])   % Structure containing the parameters (location, etc.) of the transmitter antennas
         rx = struct('xy_m',[],'xyz_m',[])   % Structure containing the parameters (location, etc.) of the receiver antennas
         vx = struct('xy_m','xyz_m')         % Structure containing the parameters (location, etc.) of the virtual element antennas
@@ -18,7 +19,7 @@ classdef sarAntennaArray < handle
         % following form:
         %   x (m)   |   x (lambda)  |   y (m)   |   y (lambda)  |   state
         %   A       |   B           |   C       |   D           |   1
-        % Where A, B, C, and D are doubles and the x-location of the 
+        % Where A, B, C, and D are doubles and the x-location of the
         % transmit element is computed by x = A + B*lambda, using lambda as
         % the lambda_m property of the fmcwChirpParameters object fmcw
         tableTx = [
@@ -30,7 +31,7 @@ classdef sarAntennaArray < handle
         % following form:
         %   x (m)   |   x (lambda)  |   y (m)   |   y (lambda)  |   state
         %   A       |   B           |   C       |   D           |   1
-        % Where A, B, C, and D are doubles and the x-location of the 
+        % Where A, B, C, and D are doubles and the x-location of the
         % receive element is computed by x = A + B*lambda, using lambda as
         % the lambda_m property of the fmcwChirpParameters object fmcw
         tableRx = [
@@ -53,7 +54,7 @@ classdef sarAntennaArray < handle
         end
         
         function obj = computeAntennaArray(obj)
-            % Computes the physical and virtual antenna locations 
+            % Computes the physical and virtual antenna locations
             
             obj.tx.xy_m = single(obj.tableTx);
             obj.rx.xy_m = single(obj.tableRx);
@@ -189,6 +190,7 @@ classdef sarAntennaArray < handle
             end
             
             savedant = obj;
+            savedant.fig = [];
             save(saveName,"savedant");
             disp("Anteanna array saved to: " + saveName);
         end

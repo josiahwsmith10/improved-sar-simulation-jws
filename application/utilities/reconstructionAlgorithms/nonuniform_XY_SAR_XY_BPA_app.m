@@ -1,24 +1,25 @@
 classdef nonuniform_XY_SAR_XY_BPA_app < handle
+    % nonuniform_XY_SAR_XY_BPA_app see nonuniform_XY_SAR_XY_BPA
+    % documentation
     properties
-        sarData
+        sarData             % Computed beat signal
         
-        tx_xyz_m
-        rx_xyz_m
-        vx_xyz_m
-        target_xyz_m
-        sizeTarget
+        tx_xyz_m            % x-y-z coordinates of the transmitter antennas in the synthetic aperture
+        rx_xyz_m            % x-y-z coordinates of the receiver antennas in the synthetic aperture
+        vx_xyz_m            % x-y-z coordinates of the virtual elements in the synthetic aperture
+        target_xyz_m        % x-y-z coordinates of the voxels in the target domain, as specified by the user
+        sizeTarget          % Dimensions of the desired target, as specified by the user
         
-        imXYZ
+        imXYZ               % Reconstructed image
         
-        isGPU
-        isAmplitudeFactor
-        isFail
-        isMIMO
+        isGPU               % Boolean whether or not to use the GPU for image reconstruction
+        isAmplitudeFactor   % Boolean whether or not to include the amplitude factor in the image reconstruction process
+        isFail = false      % Boolean whether or not the reconstruction has failed
+        isMIMO              % Boolean whether or not to use the MIMO physical element locations instead of the equivalent phase center virtual element locations
         
-        k_vec
-        z0_m
+        k_vec               % Instantaneous wavenumber vector
         
-        estTime
+        estTime             % Structure for holding the estimated time until completion parameters
     end
     
     methods

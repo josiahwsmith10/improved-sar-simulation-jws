@@ -1,4 +1,6 @@
 classdef uniform_thetaY_CSAR_XYZ_PFA_app < handle
+    % uniform_thetaY_CSAR_XYZ_PFA_app see uniform_thetaY_CSAR_XYZ_PFA
+    % documentation
     properties
         sarData
         

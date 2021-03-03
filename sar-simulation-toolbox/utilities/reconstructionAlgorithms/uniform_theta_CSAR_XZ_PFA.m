@@ -1,34 +1,43 @@
 classdef uniform_theta_CSAR_XZ_PFA < handle
+    % uniform_theta_CSAR_XZ_PFA is a reconstructor class that performs 2-D
+    % Polar Formatting Algorithm image reconstruction. The synthetic
+    % aperture must span the theta dimension, forming a circular array, and
+    % the target can be a 1-D or 2-D target in the x-z plane at the
+    % y-coordinate y = 0
+    
     properties
-        sarData
+        sarData             % Computed beat signal
         
-        nFFTx
-        nFFTz
-        thetaUpsampleFactor = 1
+        nFFTx = 512         % Number of FFT points along the x-dimension, when using FFT-based reconstruction algorithms
+        nFFTz = 512         % Number of FFT points along the z-dimension, when using FFT-based reconstruction algorithms
+        thetaUpsampleFactor = 1 % Upsample factor on the theta dimension of the SAR data operated in circular or cylindrical mode
         
-        x_m
-        z_m
+        x_m                 % Reconstructed image x axis
+        z_m                 % Reconstructed image z axis
         
-        imXYZ
+        imXYZ               % Reconstructed image
         
-        isGPU
-        isAmplitudeFactor
-        isFail = false
+        isGPU               % Boolean whether or not to use the GPU for image reconstruction
+        isAmplitudeFactor   % Boolean whether or not to include the amplitude factor in the image reconstruction process
+        isFail = false      % Boolean whether or not the reconstruction has failed
         
-        theta_rad_vec
-        k_vec
-        R0_m
-        xStep_m
+        theta_rad_vec       % Angular scan locations vector
+        k_vec               % Instantaneous wavenumber vector
+        R0_m                % Radius of scan
         
-        fmcw
-        ant
-        sar
-        target
-        im
+        fmcw                % fmcwChirpParameters object
+        ant                 % sarAntennaArray object
+        sar                 % sarScenario object
+        target              % sarTarget object
+        im                  % sarImage object
     end
     
     methods
         function obj = uniform_theta_CSAR_XZ_PFA(im)
+            % Set the properties corresponding to the object handles for
+            % the imaging scenario and get the parameters from those object
+            % handles
+            
             obj.fmcw = im.fmcw;
             obj.ant = im.ant;
             obj.sar = im.sar;
@@ -39,12 +48,17 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
         end
         
         function update(obj)
+            % Update the reconstruction algorithm by getting the parameters
+            % from the object handles and verifying the parameters
+            
             getParameters(obj);
             verifyParameters(obj);
             verifyReconstruction(obj);
         end
         
         function getParameters(obj)
+            % Get the parameters from the object handles
+            
             obj.nFFTx = obj.im.nFFTx;
             obj.nFFTz = obj.im.nFFTz;
             
@@ -61,10 +75,11 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
             obj.theta_rad_vec = obj.sar.theta_rad;
             obj.k_vec = obj.fmcw.k;
             obj.R0_m = obj.ant.z0_m;
-            obj.xStep_m = obj.sar.xStep_m;
         end
         
         function verifyParameters(obj)
+            % Verify the parameters allow for imaging
+            
             obj.isFail = false;
             
             [x_m_temp,z_m_temp] = getTempXZ(obj);
@@ -89,6 +104,8 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
         end
         
         function verifyReconstruction(obj)
+            % Verify the reconstruction can continue
+            
             if obj.sar.scanMethod ~= "Circular"
                 warning("Must use 1-D θ Circular CSAR scan to use 1-D CSAR 2-D PFA image reconstruction method!");
                 obj.isFail = true;
@@ -104,6 +121,9 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
         end
         
         function [x_m_temp,z_m_temp] = getTempXZ(obj)
+            % Compute the axes of the recovered image for parameter
+            % verification
+            
             theta_rad = single(reshape(obj.theta_rad_vec,1,[]));
             
             % Compute Wavenumbers
@@ -129,6 +149,9 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
         end
         
         function imXYZ_out = computeReconstruction(obj)
+            % Update the reconstruction algorithm and attempt the
+            % reconstruction
+            
             update(obj);
             
             if ~obj.isFail
@@ -139,7 +162,10 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
             end
         end
         
-        function reconstruct(obj)          
+        function reconstruct(obj)
+            % Reconstruct the image using the 2-D Polar Formatting
+            % Algorithm
+            
             % sarData is of size (sar.numTheta, fmcw.ADCSamples)
             % Zero-Pad Data: s(theta,k)
             sarDataPadded = obj.sarData;
@@ -218,12 +244,17 @@ classdef uniform_theta_CSAR_XZ_PFA < handle
         end
         
         function displayImage(obj)
+            % Display the reconstructed x-z image
+            
             displayImage2D(obj.im,obj.im.x_m,obj.im.z_m,"x (m)","z (m)");
         end
         
         function x = make_x(obj,xStep_m,nFFTx)
+            % Make an imaging axis from the step size and number of FFT
+            % points
+            
             x = xStep_m * (-(nFFTx-1)/2 : (nFFTx-1)/2);
             x = single(x);
-        end        
+        end
     end
 end

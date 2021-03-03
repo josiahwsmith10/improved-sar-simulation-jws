@@ -1,4 +1,5 @@
 classdef uniform_XY_SAR_XY_FFT_app < handle
+    % uniform_XY_SAR_XY_FFT_app see uniform_XY_SAR_XY_FFT documentation
     properties
         sarData
         

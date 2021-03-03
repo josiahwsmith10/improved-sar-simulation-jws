@@ -1,4 +1,8 @@
 function displayImage2D(im,x_m,y_m,xlab,ylab)
+% Displays the reconstructed 2-D image
+%
+% See also PLOTXYDB.
+
 h = im.fig.h;
 
 % Organize in meshgrid format

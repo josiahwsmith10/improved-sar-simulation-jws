@@ -1,39 +1,50 @@
 classdef sarScenario_app < handle
+    % sarScenario_app object holds the properties and methods 
+    % used for simulating a MIMO-SAR scanning scenario in four modes:
+    % linear, rectilinear (planar), circular, or cylindrical
+    
     properties
-        X_m
-        Y_m
-        Z_m
-        xyz_m
-        tx
-        rx
-        vx
-        xSize_m
-        ySize_m
-        xStep_m
-        yStep_m
-        numX
-        numY
-        numTheta
-        x_m
-        y_m
-        z_m
-        theta_rad
-        thetaMax_deg
+        method                      % Scanning mode: "Linear", "Rectilinear", "Circular", or "Cylindrical"
+        xStep_m                     % Step size along the x-dimension to move the antenna array in meters
+        yStep_m                     % Step size along the y-dimension to move the antenna array in meters
+        thetaMax_deg                % Maximum angle for circular or cylindrical scans in degrees
+        numX                        % Number of steps along the x-dimension
+        numY                        % Number of steps along the y-dimension
+        numTheta                    % Number of angular steps
         
-        method
-        sarSize
+        X_m                         % Temporary storage of the entire aperture's x-coordinates
+        Y_m                         % Temporary storage of the entire aperture's y-coordinates
+        Z_m                         % Temporary storage of the entire aperture's z-coordinates
+        xyz_m                       % Location in x-y-z of the synthetic aperture, an Nx3 array, where N is the total number of SAR elements and each row contains the [x,y,z] coordinates of each element
+        tx                          % Structure containing the parameters (location, etc.) of the transmitter antennas
+        rx                          % Structure containing the parameters (location, etc.) of the receiver antennas
+        vx                          % Structure containing the parameters (location, etc.) of the virtual element antennas
+        x_m                         % Scanning points along which the antenna array is scanned in the x-dimension
+        y_m                         % Scanning points along which the antenna array is scanned in the y-dimension
+        z_m                         % Scanning points along which the antenna array is scanned in the z-dimension
+        theta_rad                   % Scanning points along which the antenna array is scanned in the angular dimension
+        xSize_m                     % Size of the synthetic aperture along the x-dimension
+        ySize_m                     % Size of the synthetic aperture along the y-dimension
+        
+        sarSize                     % Size of the SAR data after simulation (dimensions of the scan)
         
         fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
         
-        isMIMO
+        isMIMO                      % Boolean whether or not to use the MIMO physical element locations instead of the equivalent phase center virtual element locations
     end
+    
     methods
         function obj = sarScenario_app(app)
+            % Initialize the figures and update the SAR scenario
+            
             obj = initializeFigures(obj,app);
             obj = update(obj,app);
         end
         
         function obj = update(obj,app)
+            % Update the SAR scenario by getting values from app and
+            % recomputing SAR scenario
+            
             obj = getSarScenario(obj,app);
             obj = computeSarScenario(obj,app);
             if verifyMIMO(obj,app)
@@ -44,6 +55,8 @@ classdef sarScenario_app < handle
         end
         
         function obj = getSarScenario(obj,app)
+            % Get parameters of SAR scenario from app
+            
             obj.isMIMO = verifyMIMO(obj,app);
             
             obj.method = app.SARMethodDropDown.Value;
@@ -72,6 +85,9 @@ classdef sarScenario_app < handle
         end
         
         function obj = computeSarScenario(obj,app)
+            % Compute the SAR scenario, namely the positions of the SAR
+            % aperture
+            
             switch obj.method
                 case "Linear"
                     % Enable necessary fields
@@ -233,6 +249,8 @@ classdef sarScenario_app < handle
         end
         
         function obj = getsarAxes(obj)
+            % Computes the scanning position axes
+            
             % Update number of steps
             obj.xSize_m = obj.numX * obj.xStep_m;
             obj.ySize_m = obj.numY * obj.yStep_m;
@@ -244,8 +262,9 @@ classdef sarScenario_app < handle
             obj.z_m = 0;
         end
         
-        % Figure functions
         function obj = initializeFigures(obj,app)
+            % Initilizes the figures
+            
             closeFigures(obj)
             
             try
@@ -263,6 +282,8 @@ classdef sarScenario_app < handle
         end
         
         function closeFigures(obj)
+            % Attempts to close the figures
+            
             try
                 close(obj.fig.f)
             catch
@@ -270,6 +291,8 @@ classdef sarScenario_app < handle
         end
         
         function displaySarScenario(obj)
+            % Plots the MIMO-SAR array
+            
             if obj.method == "-"
                 return;
             end
@@ -300,6 +323,8 @@ classdef sarScenario_app < handle
         end
         
         function displayVirtualSarScenario(obj)
+            % Plots the equivalent-phase-center (EPC) SAR array
+            
             if obj.method == "-"
                 return;
             end
@@ -327,6 +352,8 @@ classdef sarScenario_app < handle
         end
         
         function failtf = verifyLinearity(obj,app)
+            % Verifies that the MIMO antenna array is colinear
+            
             if max(diff([app.ant.tx.xy_m(:,1);app.ant.rx.xy_m(:,1)])) > 8*eps
                 uiconfirm(app.UIFigure,"MIMO array must be colinear. Please disable necessary elements.",'Array Topology Error!',...
                     "Options",{'OK'},'Icon','warning');
@@ -338,14 +365,13 @@ classdef sarScenario_app < handle
         end
         
         function tf = verifyMIMO(obj,app)
+            % Verifies if the user has specified MIMO or EPC in the app
+            
             if app.MIMOSwitch.Value == "Use MIMO Array"
                 tf = true;
             elseif app.MIMOSwitch.Value == "Use EPC Virtual Elements"
                 tf = false;
             end
         end
-    end
-    
-    methods(Static)
     end
 end

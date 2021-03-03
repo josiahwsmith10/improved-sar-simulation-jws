@@ -1,5 +1,5 @@
 classdef antennaArray_app < handle
-    % antennaArray_app An antennaArray_app object holds the properties and methods
+    % antennaArray_app object holds the properties and methods
     % of the MIMO antenna array as specified by the user
     
     properties

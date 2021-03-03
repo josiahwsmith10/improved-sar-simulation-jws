@@ -1,36 +1,45 @@
 classdef uniform_XY_SAR_XY_FFT < handle
+    % uniform_XY_SAR_XY_FFT is a reconstructor class that performs 2-D FFT
+    % image reconstruction. The synthetic aperture must span an x-y plane
+    % at the z-coordinate z0_m and the target must be a 2-D target at in
+    % x-y plane at the z-coordinate zSlice_m
+    
     properties
-        sarData
+        sarData             % Computed beat signal
         
-        nFFTx
-        nFFTy
+        nFFTx = 512         % Number of FFT points along the x-dimension, when using FFT-based reconstruction algorithms
+        nFFTy = 512         % Number of FFT points along the y-dimension, when using FFT-based reconstruction algorithms
         
-        x_m
-        y_m
+        x_m                 % Reconstructed image x axis
+        y_m                 % Reconstructed image y axis
         
-        imXYZ
+        imXYZ               % Reconstructed image
         
-        isGPU
-        isAmplitudeFactor
-        isFail = false
-        isMult2Mono
+        isGPU               % Boolean whether or not to use the GPU for image reconstruction
+        isAmplitudeFactor   % Boolean whether or not to include the amplitude factor in the image reconstruction process
+        isFail = false      % Boolean whether or not the reconstruction has failed
+        isMult2Mono = false   % Boolean whether or not to use the multistatic-to-monostatic approximation
         
-        zRef_m
-        k_vec
-        z0_m
-        zSlice_m
-        xStep_m
-        yStep_m
+        zRef_m = 0.25       % z location of reference plane for multistatic-to-monostatic approximation
+        zSlice_m            % z slice of interest when reconstructing a 2-D x-y image, in meters
+        k_vec               % Instantaneous wavenumber vector
+        z0_m                % Location of the antenna array in the z-plane
+        xStep_m = 1e-3      % Step size along the x-dimension to move the antenna array in meters
+        yStep_m = 8e-3      % Step size along the y-dimension to move the antenna array in meters
         
-        fmcw
-        ant
-        sar
-        target
-        im
+        fmcw                % fmcwChirpParameters object
+        ant                 % sarAntennaArray object
+        sar                 % sarScenario object
+        target              % sarTarget object
+        im                  % sarImage object
     end
     
     methods
         function obj = uniform_XY_SAR_XY_FFT(im)
+            % Set the properties corresponding to the object handles for
+            % the imaging scenario and get the parameters from those object
+            % handles
+            
             obj.fmcw = im.fmcw;
             obj.ant = im.ant;
             obj.sar = im.sar;
@@ -41,12 +50,17 @@ classdef uniform_XY_SAR_XY_FFT < handle
         end
         
         function obj = update(obj)
+            % Update the reconstruction algorithm by getting the parameters
+            % from the object handles and verifying the parameters
+            
             getParameters(obj);
             verifyParameters(obj);
             verifyReconstruction(obj);
         end
         
         function getParameters(obj)
+            % Get the parameters from the object handles
+            
             obj.nFFTx = obj.im.nFFTx;
             obj.nFFTy = obj.im.nFFTy;
             
@@ -68,6 +82,8 @@ classdef uniform_XY_SAR_XY_FFT < handle
         end
         
         function verifyParameters(obj)
+            % Verify the parameters allow for imaging
+            
             obj.isFail = false;
             
             x_m_temp = make_x(obj,obj.sar.xStep_m,obj.nFFTx);
@@ -91,6 +107,8 @@ classdef uniform_XY_SAR_XY_FFT < handle
         end
         
         function verifyReconstruction(obj)
+            % Verify the reconstruction can continue
+            
             if obj.sar.scanMethod ~= "Rectilinear"
                 warning("Must use 2-D XY SAR scan to use 2-D SAR 2-D FFT image reconstruction method!");
                 obj.isFail = true;
@@ -131,6 +149,9 @@ classdef uniform_XY_SAR_XY_FFT < handle
         end
         
         function imXYZ_out = computeReconstruction(obj)
+            % Update the reconstruction algorithm and attempt the
+            % reconstruction
+            
             update(obj);
             
             if ~obj.isFail
@@ -146,6 +167,8 @@ classdef uniform_XY_SAR_XY_FFT < handle
         end
         
         function obj = reconstruct(obj)
+            % Reconstruct the image using the 2-D FFT Method
+            
             % sarData is of size (sar.numY, sar.numX, fmcw.ADCSamples)
             % Zero-Pad Data: s(y,x,k)
             sarDataPadded = obj.sarData;
@@ -204,15 +227,23 @@ classdef uniform_XY_SAR_XY_FFT < handle
         end
         
         function displayImage(obj)
+            % Display the reconstructed x-y image
+            
             displayImage2D(obj.im,obj.im.x_m,obj.im.y_m,"x (m)","y (m)");
         end
         
         function x = make_x(obj,xStep_m,nFFTx)
+            % Make an imaging axis from the step size and number of FFT
+            % points
+            
             x = xStep_m * (-(nFFTx-1)/2 : (nFFTx-1)/2);
             x = single(x);
         end
         
         function kX = make_kX(obj,dkX,nFFTx)
+            % Make a spatial wavenumber vector from the step size of the
+            % spatial wavenumber and number of FFT points
+            
             if mod(nFFTx,2)==0
                 kX = dkX * ( -nFFTx/2 : nFFTx/2-1 );
             else

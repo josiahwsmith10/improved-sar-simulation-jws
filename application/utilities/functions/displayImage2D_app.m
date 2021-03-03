@@ -1,4 +1,4 @@
-function displayImage2D(im,x_m,y_m,xlab,ylab)
+function displayImage2D_app(im,x_m,y_m,xlab,ylab)
 h = im.fig.h;
 
 % Organize in meshgrid format

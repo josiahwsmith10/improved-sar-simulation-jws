@@ -1,4 +1,5 @@
 classdef uniform_Y_SAR_YZ_RMA_app < handle
+    % uniform_Y_SAR_YZ_RMA_app see uniform_Y_SAR_YZ_RMA documentation
     properties
         sarData
         

@@ -1,4 +1,8 @@
 function displayImage3D(im)
+% Displays the 3-D reconstructed image
+%
+% See also PLOTXYZDB.
+
 h = im.fig.h;
 im.vSliceIndex = 1:length(im.z_m);
 

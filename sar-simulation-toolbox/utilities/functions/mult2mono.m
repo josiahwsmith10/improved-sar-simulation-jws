@@ -1,4 +1,7 @@
 function obj = mult2mono(obj)
+% Computes the Y-dimension multistatic-to-monostatic approxmiation. Only
+% works for MIMO arrays whose elements are colinear 
+
 % Y-dimension only multistatic-to-monostatic approximation
 if numel(obj.sar.sarSize) == 3
     k = reshape(obj.k_vec,1,1,[]);

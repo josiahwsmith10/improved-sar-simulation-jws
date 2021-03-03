@@ -1,33 +1,43 @@
 classdef uniform_Y_SAR_Y_FFT < handle
+    % uniform_Y_SAR_Y_FFT is a reconstructor class that performs a 1-D FFT
+    % method image reconstruction. The synthetic aperture must span the
+    % y-dimension and the target can be a 1-D or 2-D target in the y-z
+    % plane. The reconstructed image is a slice along the y-dimension at
+    % the z-coordinate zSlice_m
+    
     properties
-        sarData
+        sarData             % Computed beat signal
         
-        nFFTy
+        nFFTy = 512         % Number of FFT points along the y-dimension, when using FFT-based reconstruction algorithms
         
-        y_m
+        y_m                 % Reconstructed image y axis
         
-        imXYZ
+        imXYZ               % Reconstructed image
         
-        isGPU
-        isAmplitudeFactor
-        isFail = false
-        isMult2Mono
+        isGPU               % Boolean whether or not to use the GPU for image reconstruction
+        isAmplitudeFactor   % Boolean whether or not to include the amplitude factor in the image reconstruction process
+        isFail = false      % Boolean whether or not the reconstruction has failed
+        isMult2Mono = false   % Boolean whether or not to use the multistatic-to-monostatic approximation
         
-        zRef_m
-        zSlice_m
-        k_vec
-        z0_m
-        yStep_m
+        zRef_m = 0.25       % z location of reference plane for multistatic-to-monostatic approximation
+        zSlice_m            % z slice of interest when reconstructing a 2-D x-y image, in meters
+        k_vec               % Instantaneous wavenumber vector
+        z0_m                % Location of the antenna array in the z-plane
+        yStep_m = 8e-3      % Step size along the y-dimension to move the antenna array in meters
         
-        fmcw
-        ant
-        sar
-        target
-        im
+        fmcw                % fmcwChirpParameters object
+        ant                 % sarAntennaArray object
+        sar                 % sarScenario object
+        target              % sarTarget object
+        im                  % sarImage object
     end
     
     methods
         function obj = uniform_Y_SAR_Y_FFT(im)
+            % Set the properties corresponding to the object handles for
+            % the imaging scenario and get the parameters from those object
+            % handles
+            
             obj.fmcw = im.fmcw;
             obj.ant = im.ant;
             obj.sar = im.sar;
@@ -38,12 +48,17 @@ classdef uniform_Y_SAR_Y_FFT < handle
         end
         
         function update(obj)
+            % Update the reconstruction algorithm by getting the parameters
+            % from the object handles and verifying the parameters
+            
             getParameters(obj);
             verifyParameters(obj);
             verifyReconstruction(obj);
         end
         
         function getParameters(obj)
+            % Get the parameters from the object handles
+            
             obj.nFFTy = obj.im.nFFTy;
             
             obj.y_m = obj.im.y_m;
@@ -62,6 +77,8 @@ classdef uniform_Y_SAR_Y_FFT < handle
         end
         
         function verifyParameters(obj)
+            % Verify the parameters allow for imaging
+            
             obj.isFail = false;
             
             y_m_temp = make_x(obj,obj.sar.yStep_m,obj.nFFTy);
@@ -73,7 +90,9 @@ classdef uniform_Y_SAR_Y_FFT < handle
             end
         end
         
-        function verifyReconstruction(obj) 
+        function verifyReconstruction(obj)
+            % Verify the reconstruction can continue
+            
             if obj.sar.scanMethod ~= "Linear"
                 warning("Must use linear SAR scan along the Y-axis to perform Uniform 1-D SAR 2-D RMA image reconstruction method!");
                 obj.isFail = true;
@@ -112,8 +131,11 @@ classdef uniform_Y_SAR_Y_FFT < handle
             % Everything is okay to continue
             obj.yStep_m = obj.sar.yStep_m/obj.ant.vx.numVx;
         end
-                
+        
         function imXYZ_out = computeReconstruction(obj)
+            % Update the reconstruction algorithm and attempt the
+            % reconstruction
+            
             update(obj);
             
             if ~obj.isFail
@@ -129,7 +151,9 @@ classdef uniform_Y_SAR_Y_FFT < handle
         end
         
         function reconstruct(obj)
-            % Start the Progress Bar            
+            % Reconstruct the image using the 1-D FFT Method
+            
+            % Start the Progress Bar
             % sarData is of size (sar.numY, fmcw.ADCSamples)
             % Zero-Pad Data: s(y,k)
             sarDataPadded = obj.sarData;
@@ -137,7 +161,7 @@ classdef uniform_Y_SAR_Y_FFT < handle
             clear sarData
             
             % Compute Wavenumbers
-            k = single(reshape(obj.k_vec,1,[]));            
+            k = single(reshape(obj.k_vec,1,[]));
             L_y = obj.nFFTy * obj.yStep_m;
             dkY = 2*pi/L_y;
             kY = make_kX(obj,dkY,obj.nFFTy)';
@@ -164,8 +188,8 @@ classdef uniform_Y_SAR_Y_FFT < handle
             end
             
             sarImageFFT = sum(sarDataFFT .* focusingFilter,2);
-            clear sarDataFFT focusingFilter kY k kZ 
-                       
+            clear sarDataFFT focusingFilter kY k kZ
+            
             % Recover Image by IFT: p(y)
             sarImage = single(abs(ifftn(sarImageFFT)));
             clear sarImageFFT focusingFilter
@@ -180,15 +204,23 @@ classdef uniform_Y_SAR_Y_FFT < handle
         end
         
         function displayImage(obj)
+            % Display the y image
+            
             displayImage1D(obj.im,obj.im.y_m,'y (m)');
         end
         
         function x = make_x(obj,xStep_m,nFFTx)
+            % Make an imaging axis from the step size and number of FFT
+            % points
+            
             x = xStep_m * (-(nFFTx-1)/2 : (nFFTx-1)/2);
             x = single(x);
         end
         
         function kX = make_kX(obj,dkX,nFFTx)
+            % Make a spatial wavenumber vector from the step size of the
+            % spatial wavenumber and number of FFT points
+            
             if mod(nFFTx,2)==0
                 kX = dkX * ( -nFFTx/2 : nFFTx/2-1 );
             else

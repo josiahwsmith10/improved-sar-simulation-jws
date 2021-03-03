@@ -1,8 +1,17 @@
 classdef sarImage < handle
-    % sarImage a sarImage object holds the properties and methods used for
+    % sarImage object holds the properties and methods used for
     % reconstructing the image from the simulated SAR scenario
     
     properties(SetObservable)
+        fmcw                        % An fmcwChirpParameters object
+        ant                         % A sarAntennaArray object
+        sar                         % A sarScenario object
+        target                      % A sarTarget object
+        
+        method = "-"                % Reconstruction algorithm to use
+    end
+    
+    properties
         nFFTx = 512                 % Number of FFT points along the x-dimension, when using FFT-based reconstruction algorithms
         nFFTy = 512                 % Number of FFT points along the y-dimension, when using FFT-based reconstruction algorithms
         nFFTz = 512                 % Number of FFT points along the z-dimension, when using FFT-based reconstruction algorithms
@@ -24,8 +33,6 @@ classdef sarImage < handle
         zMin_m = 0                  % Minimum value of reconstructed image along z-dimension
         zMax_m = 0.5                % Maximum value of reconstructed image along z-dimension
         
-        method = "-"                % Reconstruction algorithm to use
-        
         imXYZ                       % Reconstructed image
         
         fig = struct('f',[],'h',[]) % Structure containing the figure and handle used for showing the target
@@ -33,18 +40,15 @@ classdef sarImage < handle
         fontSize = 12               % Font size of displayed image
         vSliceIndex                 % Slices of the 3-D image along the z-dimension to use (default: use all)
         
-        reconstructor = struct("isFail",false) % Reconstructor object: depends on which reconstruction algorithm is being used 
-        isGPU                       % Boolean whether or not to use the GPU for image reconstruction (results vary depending on imaging scenario and parameters)
+        reconstructor = struct("isFail",false) % Reconstructor object: depends on which reconstruction algorithm is being used
+        isGPU = true                % Boolean whether or not to use the GPU for image reconstruction (results vary depending on imaging scenario and parameters)
+        isGPUVerified = false       % Boolean whether or not the GPU is has been verified
         isMult2Mono = false         % Boolean whether or not to use the multistatic-to-monostatic approximation
         zRef_m = 0.25               % z location of reference plane for multistatic-to-monostatic approximation
         zSlice_m                    % z slice of interest when reconstructing a 2-D x-y image, in meters
         thetaUpsampleFactor = 1     % Upsample factor on the theta dimension of the SAR data operated in circular or cylindrical mode
-        
-        fmcw                        % An fmcwChirpParameters object
-        ant                         % A sarAntennaArray object
-        sar                         % A sarScenario object
-        target                      % A sarTarget object
     end
+    
     methods
         function obj = sarImage(fmcw,ant,sar,target)
             % Attaches the listener to the sarTarget object so
@@ -82,7 +86,7 @@ classdef sarImage < handle
             update(obj);
             
             if obj.method ~= "-" && ~obj.reconstructor.isFail
-                    disp("Attempting image reconstruction using " + obj.method + " method.")
+                disp("Attempting image reconstruction using " + obj.method + " method.")
                 obj.imXYZ = obj.reconstructor.computeReconstruction();
                 if ~obj.reconstructor.isFail
                     disp("Done reconstructing image using " + obj.method + " method.")
@@ -92,7 +96,7 @@ classdef sarImage < handle
         end
         
         function getImagingParameters(obj)
-            % Get the imaging axes and construct the image reconstruction 
+            % Get the imaging axes and construct the image reconstruction
             % algorithm object for use later. During the construction
             % process, the imaging parameters are verified
             
@@ -190,9 +194,9 @@ classdef sarImage < handle
         end
         
         function verifyGPU(obj)
-            % Verifies if the GPU can be used 
+            % Verifies if the GPU can be used
             
-            if obj.isGPU
+            if obj.isGPU && ~obj.isGPUVerified
                 try
                     reset(gpuDevice);
                 catch
@@ -200,6 +204,7 @@ classdef sarImage < handle
                     warning("Unable to locate Nvidia GPU");
                     return;
                 end
+                obj.isGPUVerified = true;
             end
         end
     end

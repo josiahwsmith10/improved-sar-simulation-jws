@@ -1,4 +1,6 @@
 function displayImage1D(im,x_m,xlab)
+% Displays the reconstructed 1-D image
+
 h = im.fig.h;
 
 % Organize in meshgrid format

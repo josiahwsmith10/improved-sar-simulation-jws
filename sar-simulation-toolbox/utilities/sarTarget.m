@@ -1,11 +1,11 @@
 classdef sarTarget < handle
-    % sarTarget A sarTarget object holds the properties and methods used in the FMCW MIMO-SAR scenario as specified by the user 
+    % sarTarget object holds the properties and methods used in the FMCW MIMO-SAR scenario as specified by the user
     
     properties
         isGPU = true                % Boolean whether or not to use the GPU for beat signal computation
         isLong = false              % Boolean whether or not to use the long beat signal computation method
         numTargets = 0              % Number of target voxels
-        xyz_m                       % Target x-y-z locations as a (numTargets)x3 array 
+        xyz_m                       % Target x-y-z locations as a (numTargets)x3 array
         amp                         % Column vector of target reflectivities
         R                           % Radial distances from antennas to target (MIMO or EPC)
     end
@@ -16,6 +16,7 @@ classdef sarTarget < handle
         isPNG = false               % Boolean whether or not to include the PNG file as a target
         isSTL = false               % Boolean whether or not to include the STL file as a target
         isRandomPoints = false      % Boolean whether or not to include the random points as a target
+        isGPUVerified = false       % Boolean whether or not the GPU is has been verified
         
         % tableTarget - Array containing the x-y-z location of the targets
         % and their corresponding reflectivities in the form:
@@ -273,7 +274,7 @@ classdef sarTarget < handle
                     obj.sarData(:,indK) = single(gather(sum(temp,2)));
                     % Update the progress dialog
                     tocs(indK) = toc;
-                    waitbar(indK/obj.fmcw.ADCSamples,d,"Generating Beat Signal. Estimated Time Remaining: " + getEstTime(tocs,indK,obj.fmcw.ADCSamples));
+                    waitbar(indK/obj.fmcw.ADCSamples,d,"Generating Beat Signal. Estimated Time Remaining: " + getEstTime(obj,tocs,indK,obj.fmcw.ADCSamples));
                 end
             catch
                 % Always works method
@@ -326,7 +327,7 @@ classdef sarTarget < handle
                         obj.sarData(indSAR,indK) = single(gather(sum(temp,2)));
                         % Update the progress dialog
                         tocs(count) = toc;
-                        waitbar(count/(obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)),d,"Generating Beat Signal Using Slow Method. Estimated Time Remaining: " + getEstTime(tocs,count,obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)));
+                        waitbar(count/(obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)),d,"Generating Beat Signal Using Slow Method. Estimated Time Remaining: " + getEstTime(obj,tocs,count,obj.fmcw.ADCSamples*size(obj.sar.rx.xyz_m,1)));
                     end
                 end
             end
@@ -460,7 +461,7 @@ classdef sarTarget < handle
             savedtarget.ant = [];
             savedtarget.sar = [];
             save(saveName,"savedtarget");
-            disp("Target saved to: " + savePathFull);
+            disp("Target saved to: " + saveName);
         end
         
         function loadTarget(obj,loadName)
@@ -471,19 +472,18 @@ classdef sarTarget < handle
                 return;
             end
             
-            loadPathFull = "./saved/targets/" + loadName + ".mat";
-            load(loadPathFull,"savedtarget");
+            load(loadName,"savedtarget");
             
             fieldlist = string(fieldnames(savedtarget));
             for indField = 1:length(fieldlist)
-                obj.(fieldlist(indField)) = savedtarget(fieldlist(indfield));
+                obj.(fieldlist(indField)) = savedtarget.(fieldlist(indField));
             end
         end
         
         function verifyGPU(obj)
-            % Verifies if the GPU can be used 
+            % Verifies if the GPU can be used
             
-            if obj.isGPU
+            if obj.isGPU && ~obj.isGPUVerified
                 try
                     reset(gpuDevice);
                 catch
@@ -491,24 +491,11 @@ classdef sarTarget < handle
                     warning("Unable to locate Nvidia GPU");
                     return;
                 end
+                obj.isGPUVerified = true;
             end
         end
         
-        function attachListener(obj)
-            % Attaches a listener to the object handle
-            
-            addlistener(obj,{'isAmplitudeFactor','isTable','isPNG','isSTL','isRandomPoints','tableTarget','png','stl','rp','fmcw','ant','sar'},'PostSet',@sarTarget.propChange);
-        end
-    end
-    
-    methods(Static)
-        function propChange(metaProp,eventData)
-            % Recomputes the target if the watched parameters are changed
-            
-            getTarget(eventData.AffectedObject);
-        end
-        
-        function outstr = getEstTime(tocs,currentInd,totalInd)
+        function outstr = getEstTime(obj,tocs,currentInd,totalInd)
             % Estimates the time until completion
             
             avgtoc = mean(tocs(1:currentInd))*(totalInd - currentInd);
@@ -528,6 +515,20 @@ classdef sarTarget < handle
                 secrem = "0" + secrem;
             end
             outstr = hrrem + ":" + minrem + ":" + secrem;
+        end
+        
+        function attachListener(obj)
+            % Attaches a listener to the object handle
+            
+            addlistener(obj,{'isAmplitudeFactor','isTable','isPNG','isSTL','isRandomPoints','tableTarget','png','stl','rp','fmcw','ant','sar'},'PostSet',@sarTarget.propChange);
+        end
+    end
+    
+    methods(Static)
+        function propChange(metaProp,eventData)
+            % Recomputes the target if the watched parameters are changed
+            
+            getTarget(eventData.AffectedObject);
         end
     end
 end

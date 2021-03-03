@@ -1,4 +1,4 @@
-function displayImage1D(im,x_m,xlab)
+function displayImage1D_app(im,x_m,xlab)
 h = im.fig.h;
 
 % Organize in meshgrid format

@@ -1,4 +1,4 @@
-function displayImage3D(im)
+function displayImage3D_app(im)
 h = im.fig.h;
 im.vSliceIndex = 1:length(im.z_m);
 

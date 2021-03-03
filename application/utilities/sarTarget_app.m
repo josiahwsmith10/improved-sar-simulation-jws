@@ -1,5 +1,5 @@
 classdef sarTarget_app < handle
-    % sarTarget_app A sarTarget_app object holds the properties and methods 
+    % sarTarget_app object holds the properties and methods 
     % used in the FMCW MIMO-SAR scenario as specified by the user
     
     properties

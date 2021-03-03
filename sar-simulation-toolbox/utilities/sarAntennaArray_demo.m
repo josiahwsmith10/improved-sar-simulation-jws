@@ -44,4 +44,4 @@ ant.displayAntennaArray();
 ant.loadAntennaArray("AWR1243");
 
 %% Save FMCW Parameters
-ant.saveAntennaArray("AWR1243");
+ant.saveAntennaArray("AWR1243_2");

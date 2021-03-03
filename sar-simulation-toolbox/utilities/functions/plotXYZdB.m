@@ -1,13 +1,21 @@
-function plotXYZdB(imgXYZ,X,Y,Z,vSliceIndex,dBMin,titlestr,fontSize)
-if isempty(vSliceIndex)
-    vSliceIndex = 1:length(Z);
+function plotXYZdB(imgXYZ,X,Y,Z,zSliceIndex,dBMin,titlestr,fontSize)
+% PLOTXYZDB     Plots a 3-D point cloud image in dB
+%   PLOTXYZDB(imgXYZ,X,Y,Z,zSliceIndex,dBMin,titlestr,fontSize) plots the
+%   image in the 3-D array imgXYZ along the dimensions specified in X,Y,Z,
+%   where zSliceIndex is the choice of the slices along the Z-dimension
+%   specified by the user, dBMin is the minimum threshold in terms of dB,
+%   titlestr is the title of the figure, and fontSize is the font size used
+%   for the axes and various labels
+
+if isempty(zSliceIndex)
+    zSliceIndex = 1:length(Z);
 end
 
 imgXYZ = double(imgXYZ);
 X = double(X);
 Y = double(Y);
 Z = double(Z);
-vSliceIndex = double(vSliceIndex);
+zSliceIndex = double(zSliceIndex);
 
 f = figure;
 h = handle(axes);
@@ -29,13 +37,13 @@ clear imgXYZ imgZXY
 imgZXY_dB(imgZXY_dB<dBMin) = -1e10;
 imgZXY_dB(isnan(imgZXY_dB)) = -1e10;
 
-hs = slice(h,meshu,meshv,meshw,imgZXY_dB,[],V(vSliceIndex),[]);
+hs = slice(h,meshu,meshv,meshw,imgZXY_dB,[],V(zSliceIndex),[]);
 set(hs,'FaceColor','interp','EdgeColor','none');
 set(f,'PaperUnits','inches','PaperPosition',[0 0 4 3],'PaperSize',[4 3])
 axis(h,'vis3d');
 
-for kk=1:length(vSliceIndex)
-    set(hs(kk),'AlphaData',squeeze(imgZXY_dB(kk+vSliceIndex(1)-1,:,:)),'FaceAlpha','interp');
+for kk=1:length(zSliceIndex)
+    set(hs(kk),'AlphaData',squeeze(imgZXY_dB(kk+zSliceIndex(1)-1,:,:)),'FaceAlpha','interp');
 end
 
 colormap(h,'jet')

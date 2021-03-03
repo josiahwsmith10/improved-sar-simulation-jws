@@ -1,37 +1,46 @@
 classdef uniform_XY_SAR_XYZ_RMA < handle
+    % uniform_XY_SAR_XYZ_RMA is a reconstructor class that performs 3-D
+    % Range Migration Algorithm image reconstruction. The synthetic
+    % aperture must span the x-y plane at the z-coordinate z0_m and the
+    % target can be a 1-D, 2-D, or 3-D target in x-y-z space
+    
     properties
-        sarData
+        sarData             % Computed beat signal
         
-        nFFTx
-        nFFTy
-        nFFTz
+        nFFTx = 512         % Number of FFT points along the x-dimension, when using FFT-based reconstruction algorithms
+        nFFTy = 512         % Number of FFT points along the y-dimension, when using FFT-based reconstruction algorithms
+        nFFTz = 512         % Number of FFT points along the z-dimension, when using FFT-based reconstruction algorithms
         
-        x_m
-        y_m
-        z_m
+        x_m                 % Reconstructed image x axis
+        y_m                 % Reconstructed image y axis
+        z_m                 % Reconstructed image z axis
         
-        imXYZ
+        imXYZ               % Reconstructed image
         
-        isGPU
-        isAmplitudeFactor
-        isFail = false
-        isMult2Mono
+        isGPU               % Boolean whether or not to use the GPU for image reconstruction
+        isAmplitudeFactor   % Boolean whether or not to include the amplitude factor in the image reconstruction process
+        isFail = false      % Boolean whether or not the reconstruction has failed
+        isMult2Mono = false   % Boolean whether or not to use the multistatic-to-monostatic approximation
         
-        zRef_m
-        k_vec
-        z0_m
-        xStep_m
-        yStep_m
+        zRef_m = 0.25       % z location of reference plane for multistatic-to-monostatic approximation
+        k_vec               % Instantaneous wavenumber vector
+        z0_m                % Location of the antenna array in the z-plane
+        xStep_m = 1e-3      % Step size along the x-dimension to move the antenna array in meters
+        yStep_m = 8e-3      % Step size along the y-dimension to move the antenna array in meters
         
-        fmcw
-        ant
-        sar
-        target
-        im
+        fmcw                % fmcwChirpParameters object
+        ant                 % sarAntennaArray object
+        sar                 % sarScenario object
+        target              % sarTarget object
+        im                  % sarImage object
     end
     
     methods
         function obj = uniform_XY_SAR_XYZ_RMA(im)
+            % Set the properties corresponding to the object handles for
+            % the imaging scenario and get the parameters from those object
+            % handles
+            
             obj.fmcw = im.fmcw;
             obj.ant = im.ant;
             obj.sar = im.sar;
@@ -42,12 +51,17 @@ classdef uniform_XY_SAR_XYZ_RMA < handle
         end
         
         function update(obj)
+            % Update the reconstruction algorithm by getting the parameters
+            % from the object handles and verifying the parameters
+            
             getParameters(obj);
             verifyParameters(obj);
             verifyReconstruction(obj);
         end
         
         function getParameters(obj)
+            % Get the parameters from the object handles
+            
             obj.nFFTx = obj.im.nFFTx;
             obj.nFFTy = obj.im.nFFTy;
             obj.nFFTz = obj.im.nFFTz;
@@ -70,6 +84,8 @@ classdef uniform_XY_SAR_XYZ_RMA < handle
         end
         
         function verifyParameters(obj)
+            % Verify the parameters allow for imaging
+            
             obj.isFail = false;
             
             kZU = single(reshape(linspace(0,2*max(obj.k_vec) - 2*max(obj.k_vec)/obj.nFFTz,obj.nFFTz),1,1,[]));
@@ -96,6 +112,8 @@ classdef uniform_XY_SAR_XYZ_RMA < handle
         end
         
         function verifyReconstruction(obj)
+            % Verify the reconstruction can continue
+            
             if obj.sar.scanMethod ~= "Rectilinear"
                 warning("Must use 2-D XY SAR scan to use 2-D SAR 3-D RMA image reconstruction method!");
                 obj.isFail = true;
@@ -136,6 +154,9 @@ classdef uniform_XY_SAR_XYZ_RMA < handle
         end
         
         function imXYZ_out = computeReconstruction(obj)
+            % Update the reconstruction algorithm and attempt the
+            % reconstruction
+            
             update(obj);
             
             if ~obj.isFail
@@ -151,6 +172,8 @@ classdef uniform_XY_SAR_XYZ_RMA < handle
         end
         
         function reconstruct(obj)
+            % Reconstruct the image using the 3-D Range Migration Algorithm
+            
             % sarData is of size (sar.numY, sar.numX, fmcw.ADCSamples)
             % Zero-Pad Data: s(y,x,k)
             sarDataPadded = obj.sarData;
@@ -242,15 +265,23 @@ classdef uniform_XY_SAR_XYZ_RMA < handle
         end
         
         function displayImage(obj)
+            % Display the reconstructed x-y-z image
+            
             displayImage3D(obj.im);
         end
         
         function x = make_x(obj,xStep_m,nFFTx)
+            % Make an imaging axis from the step size and number of FFT
+            % points
+            
             x = xStep_m * (-(nFFTx-1)/2 : (nFFTx-1)/2);
             x = single(x);
         end
         
         function kX = make_kX(obj,dkX,nFFTx)
+            % Make a spatial wavenumber vector from the step size of the
+            % spatial wavenumber and number of FFT points
+            
             if mod(nFFTx,2)==0
                 kX = dkX * ( -nFFTx/2 : nFFTx/2-1 );
             else
