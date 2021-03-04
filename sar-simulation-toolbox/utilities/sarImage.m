@@ -132,6 +132,9 @@ classdef sarImage < handle
                     
                 case "1-D CSAR 2-D BPA"
                     obj.reconstructor = nonuniform_theta_CSAR_XZ_BPA(obj);
+                    
+                case "custom"
+                    obj.reconstructor = reconstructionAlgorithmTemplate(obj);
             end
         end
         

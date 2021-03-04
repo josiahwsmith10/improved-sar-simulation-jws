@@ -47,6 +47,7 @@ classdef reconstructionAlgorithmTemplate < handle
             
             getParameters(obj);
         end
+        
         function update(obj)
             % Update the reconstruction algorithm by getting the parameters
             % from the object handles and verifying the parameters
@@ -62,7 +63,7 @@ classdef reconstructionAlgorithmTemplate < handle
             
             obj.isFail = false;
             
-            if (someLogicalExpression)
+            if (false == true)
                 warning("Parameter is wrong!")
                 obj.isFail = true;
             end
@@ -74,7 +75,7 @@ classdef reconstructionAlgorithmTemplate < handle
             
             obj.isFail = false;
             
-            if (someLogicalExpression)
+            if (false == true)
                 warning("Cannot reconstruct!")
                 obj.isFail = true;
             end

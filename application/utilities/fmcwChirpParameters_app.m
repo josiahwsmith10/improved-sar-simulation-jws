@@ -57,7 +57,7 @@ classdef fmcwChirpParameters_app < handle
         function obj = computeChirpParameters(obj,app)
             % Compute the parameters given the current values in the app
             
-            obj.ADCSampleTime_time = obj.RampEndTime_s - obj.ADCStartTime_s - obj.TXStartTime_s;
+            obj.ADCSampleTime_time = obj.RampEndTime_s - obj.ADCStartTime_s;
             obj.ADCSampleTime_sample = obj.ADCSamples/obj.fS;
             
             obj.c = physconst('lightspeed');

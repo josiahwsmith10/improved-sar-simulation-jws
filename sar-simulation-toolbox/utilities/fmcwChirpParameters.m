@@ -51,7 +51,7 @@ classdef fmcwChirpParameters < handle
             % Compute the necessary parameters given the current parameters
             % and verify parameters
             
-            obj.ADCSampleTime_time = obj.RampEndTime_s - obj.ADCStartTime_s - obj.TXStartTime_s;
+            obj.ADCSampleTime_time = obj.RampEndTime_s - obj.ADCStartTime_s;
             obj.ADCSampleTime_sample = obj.ADCSamples/obj.fS;
             
             obj.c = physconst('lightspeed');

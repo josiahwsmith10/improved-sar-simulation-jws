@@ -345,7 +345,7 @@ classdef sarTarget_app < handle
                     % Update the progress dialog
                     tocs(indK) = toc;
                     d.Value = indK/app.fmcw.ADCSamples;
-                    d.Message = "Estimated Time Remaining: " + getEstTime(tocs,indK,app.fmcw.ADCSamples);
+                    d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,indK,app.fmcw.ADCSamples);
                 end
             catch
                 d.Title = "Generating Echo Signal Using Slow Method";
@@ -399,7 +399,7 @@ classdef sarTarget_app < handle
                         % Update the progress dialog
                         tocs(count) = toc;
                         d.Value = count/(app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
-                        d.Message = "Estimated Time Remaining: " + getEstTime(tocs,count,app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
+                        d.Message = "Estimated Time Remaining: " + getEstTime(obj,tocs,count,app.fmcw.ADCSamples*size(app.sar.rx.xyz_m,1));
                     end
                 end
             end
@@ -577,10 +577,8 @@ classdef sarTarget_app < handle
                 tf = false;
             end
         end
-    end
-    
-    methods(Static)
-        function outstr = getEstTime(tocs,currentInd,totalInd)
+        
+        function outstr = getEstTime(obj,tocs,currentInd,totalInd)
             % Estimates the time until completion
             
             avgtoc = mean(tocs(1:currentInd))*(totalInd - currentInd);
