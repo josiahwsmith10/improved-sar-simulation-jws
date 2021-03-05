@@ -98,7 +98,7 @@ classdef fmcwChirpParameters_app < handle
         function obj = loadChirpParameters(obj,app)
             % Load the chirp parameters from a file
             
-            loadPathFull = "./saved/fmcwChirpParameters/" + app.FMCWLoadNameEditField.Value + ".mat";
+            loadPathFull = "./saved/chirpParameters/" + app.FMCWLoadNameEditField.Value + ".mat";
             if ~exist(loadPathFull,'file')
                 uiconfirm(app.UIFigure,"No file called " + app.FMCWLoadNameEditField.Value + ".mat to load",'Cannot Load',...
                     "Options",{'OK'},'Icon','warning');
@@ -125,7 +125,7 @@ classdef fmcwChirpParameters_app < handle
         function saveChirpParameters(obj,app)
             % Save the chirp parameters to a file
             
-            savePathFull = "./saved/fmcwChirpParameters/" + app.FMCWSaveNameEditField.Value + ".mat";
+            savePathFull = "./saved/chirpParameters/" + app.FMCWSaveNameEditField.Value + ".mat";
             if exist(savePathFull,'file')
                 selection = uiconfirm(app.UIFigure,'Are you sure you want to overwrite?','Confirm Overwrite',...
                     'Icon','warning');
